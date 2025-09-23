@@ -78,17 +78,17 @@ export const rateLimit = (config: RateLimitConfig) => {
 // Predefined rate limit configurations
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 5, // 5 attempts per 15 minutes
+  maxRequests: 20, // 20 attempts per 15 minutes (increased for development)
 });
 
 export const apiRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 100, // 100 requests per 15 minutes
+  maxRequests: 200, // 200 requests per 15 minutes
 });
 
 export const searchRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 10, // 10 searches per minute
+  maxRequests: 30, // 30 searches per minute
 });
 
 // Rate limit response helper
