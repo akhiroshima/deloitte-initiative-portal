@@ -37,7 +37,7 @@ const DocsPage: React.FC = () => {
                 {isExpanded && (
                     <div className="mt-4 space-y-4">
                         {children}
-                    </div>
+            </div>
                 )}
             </Card>
         );
