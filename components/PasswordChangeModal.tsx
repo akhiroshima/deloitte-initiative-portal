@@ -92,24 +92,12 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ isOpen, onClo
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className={`${typography.h1}`}>
-                Change Password
-              </DialogTitle>
-              <DialogDescription>
-                Update your password to keep your account secure.
-              </DialogDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className={`${typography.h1}`}>
+            Change Password
+          </DialogTitle>
+          <DialogDescription>
+            Update your password to keep your account secure.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

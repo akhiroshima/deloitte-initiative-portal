@@ -141,27 +141,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className={`${typography.h1}`}>
-                {mode === 'login' ? 'Welcome Back' : 'Join Deloitte Initiative Portal'}
-              </DialogTitle>
-              <DialogDescription>
-                {mode === 'login' 
-                  ? 'Sign in to your account to continue' 
-                  : 'Create your account to get started with initiatives'
-                }
-              </DialogDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className={`${typography.h1}`}>
+            {mode === 'login' ? 'Welcome Back' : 'Join Deloitte Initiative Portal'}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === 'login' 
+              ? 'Sign in to your account to continue' 
+              : 'Create your account to get started with initiatives'
+            }
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
