@@ -62,7 +62,7 @@ const App: React.FC = () => {
   const checkAuth = useCallback(async () => {
     try {
       setAuthLoading(true);
-      const response = await fetch('/api/auth-me');
+      const response = await fetch('/.netlify/functions/auth-me');
       const data = await response.json();
       
       if (data.authenticated && data.user) {
@@ -137,7 +137,7 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth-logout', { method: 'POST' });
+      await fetch('/.netlify/functions/auth-logout', { method: 'POST' });
     } catch (error) {
       console.error('Logout failed:', error);
     }
