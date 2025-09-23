@@ -59,7 +59,7 @@ export const createUser = async (userData: Omit<User, 'id'>): Promise<User | nul
 };
 
 export const getUserById = async (id: string): Promise<User | null> => {
-  if (!isDatabaseAvailable()) return null;
+  if (!isDatabaseAvailable() || !id) return null;
   
   try {
     const { data, error } = await supabase!
@@ -908,7 +908,7 @@ export const deleteTask = async (id: string): Promise<boolean> => {
 
 // Notifications CRUD
 export const getNotificationsForUser = async (userId: string): Promise<Notification[]> => {
-  if (!isDatabaseAvailable()) return [];
+  if (!isDatabaseAvailable() || !userId) return [];
   
   try {
     const { data, error } = await supabase!

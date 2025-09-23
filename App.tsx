@@ -62,6 +62,7 @@ const App: React.FC = () => {
   const checkAuth = useCallback(async () => {
     try {
       setAuthLoading(true);
+      console.log("Checking authentication...");
       const response = await fetch('/.netlify/functions/auth-me');
       
       // Handle non-200 responses
@@ -69,26 +70,32 @@ const App: React.FC = () => {
         console.log("Auth check failed with status:", response.status);
         setIsAuthenticated(false);
         setCurrentUser(null);
+        api.setCurrentUserId(null);
         return false;
       }
       
       const data = await response.json();
+      console.log("Auth response:", data);
       
       if (data.authenticated && data.user) {
+        console.log("User authenticated:", data.user.id);
         setIsAuthenticated(true);
         setCurrentUser(data.user);
         // Sync with API layer
         api.setCurrentUserId(data.user.id);
         return true;
       } else {
+        console.log("User not authenticated");
         setIsAuthenticated(false);
         setCurrentUser(null);
+        api.setCurrentUserId(null);
         return false;
       }
     } catch (error) {
       console.error("Auth check failed:", error);
       setIsAuthenticated(false);
       setCurrentUser(null);
+      api.setCurrentUserId(null);
       return false;
     } finally {
       setAuthLoading(false);
@@ -96,7 +103,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleDataChange = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !currentUser?.id) return;
     
     try {
       setNetworkError(false);
@@ -106,7 +113,7 @@ const App: React.FC = () => {
         api.getUsers(),
         api.getAllJoinRequests(),
         api.getAllTasks(),
-        api.getNotificationsForUser(currentUser?.id || '')
+        api.getNotificationsForUser(currentUser.id)
       ]);
       setInitiatives(initiativesData);
       setHelpWanted(helpWantedData);
