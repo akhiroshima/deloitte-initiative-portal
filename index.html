@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deloitte Initiative Portal</title>
+    <style>
+      @keyframes placeholder-grow {
+        from {
+          transform: scaleY(0);
+        }
+        to {
+          transform: scaleY(1);
+        }
+      }
+
+      .task-placeholder {
+        min-height: 100px;
+        flex-shrink: 0;
+        border-radius: calc(var(--radius) + 2px);
+        background-color: hsl(var(--muted) / 0.5);
+        border: 2px dashed hsl(var(--border));
+        transform-origin: top;
+        animation: placeholder-grow 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        transition: all 0.2s ease-in-out;
+      }
+
+      .dnd-item-transition {
+        transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+      }
+      
+      .is-dragging {
+        transform: scale(1.05) rotate(2deg);
+        box-shadow: 0 10px 20px hsl(var(--foreground) / 0.1), 0 3px 6px hsl(var(--foreground) / 0.08);
+        cursor: grabbing !important;
+        z-index: 10;
+      }
+
+      .is-drag-source {
+        visibility: hidden;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.11.0",
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "react": "https://esm.sh/react@^19.1.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "class-variance-authority": "https://esm.sh/class-variance-authority@^0.7.0",
+    "clsx": "https://esm.sh/clsx@^2.1.1",
+    "tailwind-merge": "https://esm.sh/tailwind-merge@^2.4.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-background text-foreground antialiased">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
