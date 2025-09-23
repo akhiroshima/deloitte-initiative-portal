@@ -428,7 +428,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
       <div className="space-y-8">
         <div className="flex justify-between items-start">
             <div>
-                <p className="mt-1 text-lg text-muted-foreground">Manage your profile, projects, and commitments.</p>
+                <p className={`${typography.pageDescription}`}>Manage your profile, projects, and commitments.</p>
             </div>
             {activeTab === 'profile' && !isEditing && (
                 <Button onClick={handleEditToggle}>
