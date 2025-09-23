@@ -131,8 +131,8 @@ const App: React.FC = () => {
         await handleDataChange();
       } else {
         setShowAuthModal(true);
-        setLoading(false);
       }
+      setLoading(false);
     };
     
     initializeApp();
@@ -157,7 +157,7 @@ const App: React.FC = () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
     // Clear API layer sync
-    api.setCurrentUserId('');
+    api.setCurrentUserId(null);
     setShowAuthModal(true);
   };
 

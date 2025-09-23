@@ -16,7 +16,7 @@ const generateNotification = async (data: Omit<Notification, 'id' | 'isRead' | '
 };
 
 // Set current user ID (used by auth system)
-export const setCurrentUserId = (userId: string) => {
+export const setCurrentUserId = (userId: string | null) => {
   currentUserId = userId;
 };
 
