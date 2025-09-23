@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { typography } from '../tokens/typography';
@@ -93,9 +93,14 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ isOpen, onClo
       <DialogContent className="max-w-md">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className={`${typography.h1}`}>
-              Change Password
-            </DialogTitle>
+            <div>
+              <DialogTitle className={`${typography.h1}`}>
+                Change Password
+              </DialogTitle>
+              <DialogDescription>
+                Update your password to keep your account secure.
+              </DialogDescription>
+            </div>
             <Button
               variant="ghost"
               size="sm"
