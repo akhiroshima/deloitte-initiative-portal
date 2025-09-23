@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from './ui/Button';
 import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { X } from "lucide-react"
 import { User, Initiative } from '../types';
 import * as api from '../services/api';
@@ -79,18 +80,20 @@ const InviteToProjectModal: React.FC<InviteToProjectModalProps> = ({ isOpen, onC
           <p className="text-base text-muted-foreground">You are inviting <span className="font-semibold text-foreground">{invitee.name}</span> to join an initiative.</p>
           <div>
             <label htmlFor="initiative" className={labelClasses}>Select Initiative</label>
-            <select
-                id="initiative"
-                value={selectedInitiative}
-                onChange={(e) => setSelectedInitiative(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={eligibleInitiatives.length === 0}
+            <Select 
+              value={selectedInitiative} 
+              onValueChange={setSelectedInitiative}
+              disabled={eligibleInitiatives.length === 0}
             >
-                <option value="">{eligibleInitiatives.length > 0 ? 'Choose a project...' : 'No eligible projects'}</option>
+              <SelectTrigger>
+                <SelectValue placeholder={eligibleInitiatives.length > 0 ? 'Choose a project...' : 'No eligible projects'} />
+              </SelectTrigger>
+              <SelectContent>
                 {eligibleInitiatives.map(init => (
-                    <option key={init.id} value={init.id}>{init.title}</option>
+                    <SelectItem key={init.id} value={init.id}>{init.title}</SelectItem>
                 ))}
-            </select>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground mt-1">Only active projects you are a member of are shown.</p>
           </div>
         </div>

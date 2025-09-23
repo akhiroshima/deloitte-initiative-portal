@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { X } from 'lucide-react';
 import { User } from '../../types';
 import { CreateTaskData } from '../../services/api';
@@ -76,17 +77,17 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onCr
           </div>
           <div>
             <label htmlFor="assigneeId" className={labelClasses}>Assign To</label>
-            <select
-              id="assigneeId"
-              value={assigneeId}
-              onChange={e => setAssigneeId(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="">Unassigned</option>
-              {teamMembers.map(member => (
-                  <option key={member.id} value={member.id}>{member.name}</option>
-              ))}
-            </select>
+            <Select value={assigneeId} onValueChange={setAssigneeId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Unassigned" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Unassigned</SelectItem>
+                {teamMembers.map(member => (
+                    <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/Button';
 import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { X } from "lucide-react"
 import { HelpWanted } from '../types';
 import Modal from './ui/Modal';
@@ -80,15 +81,15 @@ const CreateHelpWantedModal: React.FC<CreateHelpWantedModalProps> = ({ isOpen, o
             {isEditing && (
                 <div>
                   <label htmlFor="status" className={labelClasses}>Status</label>
-                  <select
-                      id="status"
-                      value={status}
-                      onChange={e => setStatus(e.target.value as 'Open' | 'Closed')}
-                      className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                      <option value="Open">Open</option>
-                      <option value="Closed">Closed</option>
-                  </select>
+                  <Select value={status} onValueChange={(value: 'Open' | 'Closed') => setStatus(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Open">Open</SelectItem>
+                      <SelectItem value="Closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
               </div>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}

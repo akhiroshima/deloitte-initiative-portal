@@ -6,6 +6,7 @@ import { processDocumentForInitiative, isFileTypeSupported, getFileExtension } f
 import { Button } from './ui/Button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
+import { Spinner } from './ui/Spinner';
 import { X } from "lucide-react"
 import { FileText } from "lucide-react"
 import UserSearchSelect from './ui/UserSearchSelect';
@@ -340,7 +341,7 @@ const CreateInitiativeModal: React.FC<CreateInitiativeModalProps> = ({ isOpen, o
                       <div className="flex items-center space-x-2">
                         {isProcessingDocument && (
                           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                            <Spinner size="sm" />
                             <span>Processing...</span>
                           </div>
                         )}

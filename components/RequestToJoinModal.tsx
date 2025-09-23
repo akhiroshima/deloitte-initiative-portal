@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/Button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
+import { Slider } from './ui/slider';
 import { X } from "lucide-react"
 import { User } from '../types';
 import * as api from '../services/api';
@@ -93,14 +94,13 @@ const RequestToJoinModal: React.FC<RequestToJoinModalProps> = ({ isOpen, onClose
            <div>
             <label htmlFor="hours" className={labelClasses}>Weekly Commitment</label>
              <div className="flex items-center gap-4 mt-2">
-                <input
+                <Slider
                     id="hours"
-                    type="range"
-                    min="1"
-                    max="40"
-                    value={committedHours}
-                    onChange={(e) => setCommittedHours(Number(e.target.value))}
-                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+                    min={1}
+                    max={40}
+                    value={[committedHours]}
+                    onValueChange={(value) => setCommittedHours(value[0])}
+                    className="w-full"
                 />
                 <span className="font-semibold text-foreground w-28 text-center">{committedHours} hours / week</span>
              </div>
