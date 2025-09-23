@@ -7,6 +7,7 @@ import { Button } from './ui/Button';
 import { ArrowLeft } from "lucide-react"
 import { useToasts } from './ui/ToastProvider';
 import InviteToProjectModal from './InviteToProjectModal';
+import { typography } from '../tokens/typography';
 
 
 interface UserProfileProps {

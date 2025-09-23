@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { typography } from '../tokens/typography';
@@ -142,9 +142,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
       <DialogContent className="max-w-md">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className={`${typography.h1}`}>
-              {mode === 'login' ? 'Welcome Back' : 'Join Deloitte Initiative Portal'}
-            </DialogTitle>
+            <div>
+              <DialogTitle className={`${typography.h1}`}>
+                {mode === 'login' ? 'Welcome Back' : 'Join Deloitte Initiative Portal'}
+              </DialogTitle>
+              <DialogDescription>
+                {mode === 'login' 
+                  ? 'Sign in to your account to continue' 
+                  : 'Create your account to get started with initiatives'
+                }
+              </DialogDescription>
+            </div>
             <Button
               variant="ghost"
               size="sm"
