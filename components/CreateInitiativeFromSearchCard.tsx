@@ -23,7 +23,7 @@ const CreateInitiativeFromSearchCard: React.FC<CreateInitiativeFromSearchCardPro
             <>
               <Sparkles className="h-12 w-12 text-muted-foreground animate-pulse" />
               <h3 className="mt-4 text-lg font-semibold text-foreground">Analyzing your idea...</h3>
-              <p className="mt-1 text-sm text-muted-foreground">We're preparing the form for you.</p>
+              <p className={`${typography.sectionDescription}`}>We're preparing the form for you.</p>
             </>
           ) : (
             <>
@@ -31,7 +31,7 @@ const CreateInitiativeFromSearchCard: React.FC<CreateInitiativeFromSearchCardPro
                 <Plus className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
               <h3 className="mt-3 text-base font-semibold text-foreground">Create Initiative from your Idea</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Bring your vision to life and start a new project.</p>
+              <p className={`${typography.sectionDescription}`}>Bring your vision to life and start a new project.</p>
             </>
           )}
         </Button>

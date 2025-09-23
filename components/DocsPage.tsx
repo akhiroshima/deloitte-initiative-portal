@@ -20,7 +20,7 @@ const DocsPage: React.FC = () => {
     return (
         <div className="space-y-8 max-w-4xl mx-auto">
             <div>
-                <p className="mt-2 text-sm text-muted-foreground">Your guide to discovering, managing, and succeeding with internal projects.</p>
+                <p className={`${typography.pageDescription}`}>Your guide to discovering, managing, and succeeding with internal projects.</p>
             </div>
 
             <Card className="p-6">

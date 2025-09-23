@@ -4,4 +4,6 @@ export const typography = {
   h3: 'text-base font-semibold',
   body: 'text-sm',
   caption: 'text-xs',
+  pageDescription: 'text-sm text-muted-foreground',
+  sectionDescription: 'text-sm text-muted-foreground mt-1',
 } as const;

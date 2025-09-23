@@ -239,7 +239,7 @@ const Bulletin: React.FC<BulletinProps> = ({ initiatives, currentUser, users, on
             return (
                 <div className="space-y-6">
 <h2 className={`flex items-center gap-2 ${typography.h2} text-foreground`}><Sparkles className="h-5 w-5 text-primary" /> Recommended Initiatives</h2>
-                     <p className="text-sm text-muted-foreground -mt-3">AI-powered initiative recommendations based on your profile.</p>
+                     <p className={`${typography.sectionDescription} -mt-3`}>AI-powered initiative recommendations based on your profile.</p>
                      {aiLoading ? (
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                             <InitiativeCardSkeleton />
@@ -266,7 +266,7 @@ const Bulletin: React.FC<BulletinProps> = ({ initiatives, currentUser, users, on
                          <Card className="text-center p-8 animate-fadeIn">
                              <UserCircle className="mx-auto h-12 w-12 text-muted-foreground" />
                              <h3 className="mt-4 text-lg font-medium text-foreground">Nothing to recommend... yet</h3>
-                             <p className="mt-1 text-sm text-muted-foreground">Update your profile with your skills to get personalized recommendations, or browse the other tabs!</p>
+                             <p className={`${typography.sectionDescription}`}>Update your profile with your skills to get personalized recommendations, or browse the other tabs!</p>
                          </Card>
                     )}
                 </div>
@@ -306,7 +306,7 @@ const Bulletin: React.FC<BulletinProps> = ({ initiatives, currentUser, users, on
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <p className="text-sm text-muted-foreground">Discover, join, and manage internal initiatives.</p>
+          <p className={`${typography.pageDescription}`}>Discover, join, and manage internal initiatives.</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
             <Plus className="h-5 w-5 -ml-1 mr-2" />

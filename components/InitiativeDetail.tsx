@@ -301,7 +301,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                         <div className="text-center py-8">
                           <FolderOpen className="mx-auto h-12 w-12 text-muted-foreground" />
                           <h3 className="mt-4 text-lg font-medium text-foreground">No Open Roles</h3>
-                          <p className="mt-1 text-sm text-muted-foreground">No specific roles have been posted for this initiative yet.</p>
+                          <p className={`${typography.sectionDescription}`}>No specific roles have been posted for this initiative yet.</p>
                         </div>
                     )}
                 </Card>
@@ -463,7 +463,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
               <Card className="text-center p-8">
                 <Users className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-medium text-foreground">No Join Requests</h3>
-                <p className="mt-1 text-sm text-muted-foreground">No one has requested to join this initiative yet.</p>
+                <p className={`${typography.sectionDescription}`}>No one has requested to join this initiative yet.</p>
               </Card> :
             <div className="space-y-4">
               {joinRequests.map(request => {

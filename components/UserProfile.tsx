@@ -57,7 +57,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, allInitiatives, onSelec
                         <h1 className="mt-4 text-2xl font-bold text-foreground">{user.name}</h1>
                         <p className="text-muted-foreground">{user.role}</p>
                         <p className="mt-2 text-sm text-primary">{user.email}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Location: {user.location}</p>
+                        <p className={`${typography.sectionDescription}`}>Location: {user.location}</p>
                         
                         <div className="mt-4 pt-4 border-t border-border">
                             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Weekly Capacity</h3>

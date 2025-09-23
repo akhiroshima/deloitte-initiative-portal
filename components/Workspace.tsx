@@ -281,7 +281,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
               <Card className="text-center p-8">
                   <CheckCircle className="mx-auto h-12 w-12 text-muted-foreground" />
                   <h3 className="mt-4 text-lg font-medium text-foreground">All clear!</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">You have no tasks assigned to you right now.</p>
+                  <p className={`${typography.sectionDescription}`}>You have no tasks assigned to you right now.</p>
               </Card>
           );
       case 'active':
@@ -303,7 +303,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
                 <Card className="text-center p-8">
                   <Users className="mx-auto h-12 w-12 text-muted-foreground" />
                   <h3 className="mt-4 text-lg font-medium text-foreground">No Active Initiatives</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">You haven't joined or created any initiatives yet.</p>
+                  <p className={`${typography.sectionDescription}`}>You haven't joined or created any initiatives yet.</p>
                 </Card>
               )
         );
@@ -339,7 +339,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
                         <Card className="text-center p-8">
                             <FolderOpen className="mx-auto h-12 w-12 text-muted-foreground" />
                             <h3 className="mt-4 text-lg font-medium text-foreground">No Pending Invitations</h3>
-                            <p className="mt-1 text-sm text-muted-foreground">You don't have any pending project invitations.</p>
+                            <p className={`${typography.sectionDescription}`}>You don't have any pending project invitations.</p>
                         </Card>
                     )}
                 </section>
@@ -379,7 +379,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
                         <Card className="text-center p-8">
                         <ClipboardList className="mx-auto h-12 w-12 text-muted-foreground" />
                         <h3 className="mt-4 text-lg font-medium text-foreground">No Applications Found</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">You haven't applied to any initiatives yet.</p>
+                        <p className={`${typography.sectionDescription}`}>You haven't applied to any initiatives yet.</p>
                         </Card>
                     )}
                 </section>
@@ -407,7 +407,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
                 <Card className="text-center p-8">
                     <FolderOpen className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">No Completed Initiatives</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Finish a project to see your achievements here.</p>
+                    <p className={`${typography.sectionDescription}`}>Finish a project to see your achievements here.</p>
                 </Card>
             )
         );

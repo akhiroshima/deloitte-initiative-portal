@@ -132,7 +132,7 @@ const Dashboard: React.FC<DashboardProps> = ({ initiatives, users, tasks, onSele
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-sm text-muted-foreground">Real-time health and capacity analytics.</p>
+        <p className={`${typography.pageDescription}`}>Real-time health and capacity analytics.</p>
       </div>
 
       <Card className="bg-primary/10 border-primary/20">

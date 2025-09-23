@@ -77,13 +77,13 @@ const OpportunitiesPage: React.FC<OpportunitiesPageProps> = ({ initiatives, help
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-sm text-muted-foreground">Find open roles on internal initiatives that match your skills.</p>
+        <p className={`${typography.pageDescription}`}>Find open roles on internal initiatives that match your skills.</p>
       </div>
       
       {/* Recommended for you */}
       <section>
 <h2 className={`flex items-center gap-2 ${typography.h2} text-foreground`}><Sparkles className="h-5 w-5 text-accent-foreground" /> Recommended for You</h2>
-        <p className="text-sm text-muted-foreground mt-1 mb-3">AI-powered role recommendations based on your profile.</p>
+        <p className={`${typography.sectionDescription} mb-3`}>AI-powered role recommendations based on your profile.</p>
         {aiLoading ? (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <HelpWantedCardSkeleton />
@@ -105,7 +105,7 @@ const OpportunitiesPage: React.FC<OpportunitiesPageProps> = ({ initiatives, help
             <Card className="text-center p-8">
                 <FolderOpen className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-medium text-foreground">No specific recommendations right now</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Browse all opportunities below or update your profile skills for better recommendations.</p>
+                <p className={`${typography.sectionDescription}`}>Browse all opportunities below or update your profile skills for better recommendations.</p>
             </Card>
         )}
       </section>
