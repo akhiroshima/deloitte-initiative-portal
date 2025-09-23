@@ -9,9 +9,14 @@ export const handler: Handler = async (event) => {
     }
     const cookies = parseCookies(event.headers.cookie)
     const token = cookies['session']
-    if (!token) return { statusCode: 401, body: JSON.stringify({ authenticated: false }) }
+    if (!token) {
+      console.log('No session token found in cookies');
+      return { statusCode: 401, body: JSON.stringify({ authenticated: false }) }
+    }
 
+    console.log('Session token found, verifying...');
     const claims = await verifySession(token)
+    console.log('Session verified for:', claims.sub);
     
     // Initialize Supabase client
     const supabaseUrl = process.env.SUPABASE_URL

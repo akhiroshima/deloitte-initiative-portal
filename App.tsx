@@ -63,6 +63,15 @@ const App: React.FC = () => {
     try {
       setAuthLoading(true);
       const response = await fetch('/.netlify/functions/auth-me');
+      
+      // Handle non-200 responses
+      if (!response.ok) {
+        console.log("Auth check failed with status:", response.status);
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+        return false;
+      }
+      
       const data = await response.json();
       
       if (data.authenticated && data.user) {
