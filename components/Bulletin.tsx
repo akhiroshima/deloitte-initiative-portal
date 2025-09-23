@@ -306,8 +306,7 @@ const Bulletin: React.FC<BulletinProps> = ({ initiatives, currentUser, users, on
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-<h1 className={`${typography.h1} text-foreground`}>Initiative Bulletin</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Discover, join, and manage internal initiatives.</p>
+          <p className="text-sm text-muted-foreground">Discover, join, and manage internal initiatives.</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
             <Plus className="h-5 w-5 -ml-1 mr-2" />
@@ -353,7 +352,7 @@ const Bulletin: React.FC<BulletinProps> = ({ initiatives, currentUser, users, on
       {searchIntent !== null ? (
         <section className="space-y-8">
            <div className="flex justify-between items-center">
-             <h2 className={`${typography.h1} text-foreground`}>AI Search Results</h2>
+             <h2 className={`${typography.h2} text-foreground`}>AI Search Results</h2>
              <Button onClick={handleClearSearch} variant="secondary">Clear Search</Button>
            </div>
           {searchSummary && (

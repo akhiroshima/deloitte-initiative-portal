@@ -77,8 +77,7 @@ const OpportunitiesPage: React.FC<OpportunitiesPageProps> = ({ initiatives, help
   return (
     <div className="space-y-8">
       <div>
-<h1 className={`${typography.h1} text-foreground`}>Opportunities</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Find open roles on internal initiatives that match your skills.</p>
+        <p className="text-sm text-muted-foreground">Find open roles on internal initiatives that match your skills.</p>
       </div>
       
       {/* Recommended for you */}
