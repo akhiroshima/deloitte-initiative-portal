@@ -24,8 +24,8 @@ const InviteToProjectModal: React.FC<InviteToProjectModalProps> = ({ isOpen, onC
 
   const eligibleInitiatives = useMemo(() => {
     return allInitiatives.filter(init => {
-        const isCurrentUserMember = init.teamMembers.some(m => m.userId === currentUser.id);
-        const isInviteeAlreadyMember = init.teamMembers.some(m => m.userId === invitee.id);
+        const isCurrentUserMember = init.teamMembers ? init.teamMembers.some(m => m.userId === currentUser.id) : false;
+        const isInviteeAlreadyMember = init.teamMembers ? init.teamMembers.some(m => m.userId === invitee.id) : false;
         const isActive = init.status === 'In Progress' || init.status === 'Searching Talent';
         return isCurrentUserMember && !isInviteeAlreadyMember && isActive;
     });

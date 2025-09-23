@@ -129,8 +129,8 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
     }
   };
 
-  const myActiveInitiatives = initiatives.filter(i => i.teamMembers.some(m => m.userId === currentUser.id) && i.status !== 'Completed');
-  const myAchievements = initiatives.filter(i => i.teamMembers.some(m => m.userId === currentUser.id) && i.status === 'Completed');
+  const myActiveInitiatives = initiatives.filter(i => i.teamMembers && i.teamMembers.some(m => m.userId === currentUser.id) && i.status !== 'Completed');
+  const myAchievements = initiatives.filter(i => i.teamMembers && i.teamMembers.some(m => m.userId === currentUser.id) && i.status === 'Completed');
   const myApplications = joinRequests.filter(r => r.userId === currentUser.id && r.status !== JoinRequestStatus.Invited);
   const myInvitations = joinRequests.filter(r => r.userId === currentUser.id && r.status === JoinRequestStatus.Invited);
   const myTasks = tasks.filter(t => t.assigneeId === currentUser.id);

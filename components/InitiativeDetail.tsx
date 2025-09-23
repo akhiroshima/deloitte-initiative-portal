@@ -46,7 +46,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
     .filter((m): m is { user: User, committedHours: number } => !!m.user);
     
   const isOwner = currentUser.id === initiative.ownerId;
-  const isTeamMember = initiative.teamMembers.some(m => m.userId === currentUser.id);
+  const isTeamMember = initiative.teamMembers ? initiative.teamMembers.some(m => m.userId === currentUser.id) : false;
 
   const initiativeHelpWanted = helpWanted.filter(p => p.initiativeId === initiative.id);
 

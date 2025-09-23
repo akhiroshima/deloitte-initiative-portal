@@ -55,7 +55,7 @@ const InitiativeCard: React.FC<InitiativeCardProps> = ({ initiative, recommendat
     onSelectUser(userId);
   }
 
-  const isTeamMember = currentUser ? initiative.teamMembers.some(m => m.userId === currentUser.id) : false;
+  const isTeamMember = currentUser && initiative.teamMembers ? initiative.teamMembers.some(m => m.userId === currentUser.id) : false;
   const isJoinable = initiative.status === 'Searching Talent' || initiative.status === 'In Progress';
   const showJoinButton = !isTeamMember && isJoinable;
 

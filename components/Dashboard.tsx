@@ -100,7 +100,7 @@ const Dashboard: React.FC<DashboardProps> = ({ initiatives, users, tasks, onSele
       const utilizationPercentage = capacityHrs > 0 ? Math.round((assignedHrs / capacityHrs) * 100) : 0;
       
       const activeInitiatives = initiatives.filter(i => 
-        i.teamMembers.some(m => m.userId === user.id) && (i.status === 'In Progress' || i.status === 'Under Review')
+        i.teamMembers && i.teamMembers.some(m => m.userId === user.id) && (i.status === 'In Progress' || i.status === 'Under Review')
       );
       
       data.set(user.id, { assignedHrs, capacityHrs, utilizationPercentage, activeInitiatives });

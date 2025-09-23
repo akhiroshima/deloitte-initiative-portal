@@ -23,13 +23,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, allInitiatives, onSelec
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const { addToast } = useToasts();
 
-    const userInitiatives = allInitiatives.filter(i => i.teamMembers.some(m => m.userId === user.id) && i.status !== 'Completed');
-    const userAchievements = allInitiatives.filter(i => i.teamMembers.some(m => m.userId === user.id) && i.status === 'Completed');
+    const userInitiatives = allInitiatives.filter(i => i.teamMembers && i.teamMembers.some(m => m.userId === user.id) && i.status !== 'Completed');
+    const userAchievements = allInitiatives.filter(i => i.teamMembers && i.teamMembers.some(m => m.userId === user.id) && i.status === 'Completed');
     
     // A user can invite someone if they are a member of any active project.
     const currentUserIsMemberOfSomeProject = allInitiatives.some(i => 
         (i.status === 'In Progress' || i.status === 'Searching Talent') &&
-        i.teamMembers.some(m => m.userId === currentUser.id)
+        i.teamMembers && i.teamMembers.some(m => m.userId === currentUser.id)
     );
 
     return (

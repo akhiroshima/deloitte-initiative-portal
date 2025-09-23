@@ -221,7 +221,7 @@ const Bulletin: React.FC<BulletinProps> = ({ initiatives, currentUser, users, on
     if (!currentUser) return [];
     return initiatives.filter(initiative => 
       initiative.ownerId === currentUser.id || 
-      initiative.teamMembers.some(member => member.userId === currentUser.id)
+      (initiative.teamMembers && initiative.teamMembers.some(member => member.userId === currentUser.id))
     );
   };
 

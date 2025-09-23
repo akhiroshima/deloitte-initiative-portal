@@ -37,12 +37,13 @@ const Modal: React.FC<ModalProps> = ({
                     <span className="sr-only">Close</span>
                 </button>
                 
-                {(title || description) && (
-                    <DialogHeader>
-                        {title && <DialogTitle>{title}</DialogTitle>}
-                        {description && <DialogDescription>{description}</DialogDescription>}
-                    </DialogHeader>
-                )}
+                <DialogHeader>
+                    {title && <DialogTitle>{title}</DialogTitle>}
+                    {description && <DialogDescription>{description}</DialogDescription>}
+                    {!title && !description && (
+                        <DialogTitle className="sr-only">Modal</DialogTitle>
+                    )}
+                </DialogHeader>
                 
                 <div className="mt-4">
                     {children}
