@@ -14,12 +14,13 @@ create table if not exists users (
   skills text[] not null default '{}',
   weekly_capacity_hrs integer not null default 40,
   avatar_url text,
+  needs_password_change boolean default true,
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now()
 );
 
 -- Create admin user (ahirosh@deloitte.com)
-insert into users (id, email, username, password_hash, name, role, is_admin, location, skills, weekly_capacity_hrs, avatar_url) 
+insert into users (id, email, username, password_hash, name, role, is_admin, location, skills, weekly_capacity_hrs, avatar_url, needs_password_change) 
 values (
   'admin-ahirosh',
   'ahirosh@deloitte.com',
@@ -31,7 +32,8 @@ values (
   'Global',
   ARRAY['Leadership', 'Management', 'Strategy', 'Technology'],
   40,
-  'https://ui-avatars.com/api/?name=Ahirosh+Admin&background=random'
+  'https://ui-avatars.com/api/?name=Ahirosh+Admin&background=random',
+  false -- Admin user doesn't need password change
 ) on conflict (email) do nothing;
 
 -- Initiatives table with vector index

@@ -4,10 +4,10 @@ import { signSession, buildSessionCookie } from './_lib/auth'
 import { createClient } from '@supabase/supabase-js'
 import { authRateLimit, createRateLimitResponse } from './_lib/rateLimit'
 import { withSecurity } from './_lib/security'
+import { sendEmail, generatePassword, createPasswordEmail } from './_lib/email'
 
 const bodySchema = z.object({ 
   username: z.string().min(2).max(50), 
-  password: z.string().min(8),
   name: z.string().min(2),
   role: z.enum(['Designer', 'Developer', 'Lead', 'Manager']),
   location: z.string().min(2),
@@ -33,7 +33,7 @@ const registerHandler: Handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: parsed.error.message }) }
     }
 
-    const { username, password, name, role, location, skills, weeklyCapacityHrs } = parsed.data
+    const { username, name, role, location, skills, weeklyCapacityHrs } = parsed.data
     const allowedDomain = (process.env.ALLOWED_EMAIL_DOMAIN || 'deloitte.com').toLowerCase()
     
     // Construct email from username and allowed domain
@@ -59,8 +59,9 @@ const registerHandler: Handler = async (event) => {
       return { statusCode: 409, body: JSON.stringify({ error: 'User already exists' }) }
     }
 
-    // Hash password (in production, use proper password hashing)
-    const hashedPassword = await hashPassword(password)
+    // Generate random password
+    const generatedPassword = generatePassword()
+    const hashedPassword = await hashPassword(generatedPassword)
 
     // Create user in database
     const { data: newUser, error } = await supabase
@@ -75,6 +76,7 @@ const registerHandler: Handler = async (event) => {
         skills,
         weekly_capacity_hrs: weeklyCapacityHrs,
         avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+        needs_password_change: true,
         created_at: new Date().toISOString()
       })
       .select()
@@ -85,8 +87,20 @@ const registerHandler: Handler = async (event) => {
       return { statusCode: 500, body: JSON.stringify({ error: 'Failed to create user' }) }
     }
 
+    // Send password via email
+    try {
+      await sendEmail({
+        to: emailLower,
+        subject: 'Welcome to Deloitte Initiative Portal - Your Login Credentials',
+        html: createPasswordEmail(username, generatedPassword)
+      });
+    } catch (emailError) {
+      console.error('Email send error:', emailError);
+      // Don't fail registration if email fails, but log it
+    }
+
     // Create session
-    const token = await signSession(emailLower, domain, 60 * 60 * 24) // 24h
+    const token = await signSession(emailLower, allowedDomain, 60 * 60 * 24) // 24h
     const isSecure = (event.headers['x-forwarded-proto'] || '').includes('https')
     const cookie = buildSessionCookie(token, isSecure)
 

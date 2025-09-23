@@ -162,22 +162,14 @@ const CreateInitiativeModal: React.FC<CreateInitiativeModalProps> = ({ isOpen, o
     onCreate(newInitiative);
   };
   
-  const inputClasses = `mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-3 py-2`;
-  const labelClasses = "block text-sm font-medium text-foreground";
+  const inputClasses = `flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`;
+  const labelClasses = "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70";
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="w-full max-w-6xl">
       <form onSubmit={handleSubmit}>
-        <div className="flex items-start justify-between border-b border-border p-6">
+        <div className="flex items-center justify-between border-b border-border p-6">
             <h2 id="modal-title" className={`${typography.h1} text-foreground`}>Create New Initiative</h2>
-            <button
-                type="button"
-                onClick={onClose}
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Close"
-            >
-                <X className="h-6 w-6" />
-            </button>
         </div>
         
         <div className="overflow-y-auto p-6" style={{ maxHeight: '70vh' }}>

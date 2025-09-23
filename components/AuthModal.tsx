@@ -28,8 +28,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
   // Register form state
   const [registerData, setRegisterData] = useState({
     username: '',
-    password: '',
-    confirmPassword: '',
     name: '',
     role: 'Developer' as 'Designer' | 'Developer' | 'Lead' | 'Manager',
     location: '',
@@ -82,19 +80,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
     setLoading(true);
     setError(null);
 
-    if (registerData.password !== registerData.confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
     try {
       const response = await fetch('/.netlify/functions/auth-register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: registerData.username,
-          password: registerData.password,
           name: registerData.name,
           role: registerData.role,
           location: registerData.location,
@@ -132,8 +123,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
     setLoginData({ username: '', password: '' });
     setRegisterData({
       username: '',
-      password: '',
-      confirmPassword: '',
       name: '',
       role: 'Developer',
       location: '',
@@ -365,48 +354,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="register-password" className="text-sm font-medium text-foreground">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <input
-                      id="register-password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={registerData.password}
-                      onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                      className="w-full pl-10 pr-10 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Min 8 characters"
-                      required
-                      minLength={8}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff /> : <Eye />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="register-confirm-password" className="text-sm font-medium text-foreground">
-                    Confirm Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <input
-                      id="register-confirm-password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={registerData.confirmPassword}
-                      onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                      className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Confirm password"
-                      required
-                    />
+              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">Password Information</h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                      A secure password will be automatically generated and sent to your email address. 
+                      You'll be required to change it on your first login.
+                    </p>
                   </div>
                 </div>
               </div>

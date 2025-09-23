@@ -4,8 +4,9 @@ import * as api from '../services/api';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import Tag from './ui/Tag';
-import { Pencil, X, Users, ClipboardList, CheckCircle, XCircle, FolderOpen } from 'lucide-react';
+import { Pencil, X, Users, ClipboardList, CheckCircle, XCircle, FolderOpen, Key } from 'lucide-react';
 import AcceptInviteModal from './AcceptInviteModal';
+import PasswordChangeModal from './PasswordChangeModal';
 import { useToasts } from './ui/ToastProvider';
 import { typography } from '../tokens/typography';
 import InitiativeCard from './InitiativeCard';
@@ -35,6 +36,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
 
   const [isAcceptModalOpen, setIsAcceptModalOpen] = useState(false);
   const [selectedInvite, setSelectedInvite] = useState<JoinRequest | null>(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const { addToast } = useToasts();
 
   useEffect(() => {
@@ -425,16 +427,30 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
         onSubmit={handleAcceptSubmit}
         initiativeTitle={initiatives.find(i => i.id === selectedInvite?.initiativeId)?.title || ''}
       />
+      
+      <PasswordChangeModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        onSuccess={() => {
+          addToast("Password changed successfully!", "success");
+        }}
+      />
       <div className="space-y-8">
         <div className="flex justify-between items-start">
             <div>
                 <p className={`${typography.pageDescription}`}>Manage your profile, projects, and commitments.</p>
             </div>
             {activeTab === 'profile' && !isEditing && (
-                <Button onClick={handleEditToggle}>
-                    <Pencil className="h-5 w-5 -ml-1 mr-2" />
-                    Edit Profile
-                </Button>
+                <div className="flex gap-3">
+                    <Button onClick={handleEditToggle}>
+                        <Pencil className="h-5 w-5 -ml-1 mr-2" />
+                        Edit Profile
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsPasswordModalOpen(true)}>
+                        <Key className="h-5 w-5 -ml-1 mr-2" />
+                        Change Password
+                    </Button>
+                </div>
             )}
         </div>
         

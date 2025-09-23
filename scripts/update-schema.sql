@@ -9,6 +9,9 @@ alter table initiatives add column if not exists updated_at timestamp with time 
 alter table help_wanted add column if not exists created_at timestamp with time zone default now();
 alter table help_wanted add column if not exists updated_at timestamp with time zone default now();
 
+-- Add password change tracking to users table
+alter table users add column if not exists needs_password_change boolean default true;
+
 -- Add foreign key constraint for initiatives owner_id
 -- Note: This will fail if the constraint already exists, which is fine
 DO $$ 
