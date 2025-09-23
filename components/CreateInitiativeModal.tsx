@@ -4,6 +4,7 @@ import { CreateInitiativeData } from '../services/api';
 import { AVAILABLE_LOCATIONS } from '../constants';
 import { processDocumentForInitiative, isFileTypeSupported, getFileExtension } from '../services/documentParser';
 import { Button } from './ui/Button';
+import { Input } from './ui/input';
 import { X } from "lucide-react"
 import { FileText } from "lucide-react"
 import UserSearchSelect from './ui/UserSearchSelect';
@@ -162,7 +163,6 @@ const CreateInitiativeModal: React.FC<CreateInitiativeModalProps> = ({ isOpen, o
     onCreate(newInitiative);
   };
   
-  const inputClasses = `flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`;
   const labelClasses = "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70";
 
   return (
@@ -172,13 +172,18 @@ const CreateInitiativeModal: React.FC<CreateInitiativeModalProps> = ({ isOpen, o
             <h2 id="modal-title" className={`${typography.h1} text-foreground`}>Create New Initiative</h2>
         </div>
         
-        <div className="overflow-y-auto p-6" style={{ maxHeight: '70vh' }}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Left Column - Form Fields */}
-            <div className="space-y-6">
+        <div className="flex flex-col lg:flex-row gap-8 p-6" style={{ maxHeight: '70vh' }}>
+          {/* Left Column - Form Fields */}
+          <div className="flex-1 overflow-y-auto space-y-6">
               <div>
                 <label htmlFor="title" className={labelClasses}>Initiative Title</label>
-                <input type="text" id="title" value={title} onChange={e => setTitle(e.target.value)} className={`${inputClasses} ${errors.title ? 'border-destructive' : ''}`} />
+                <Input 
+                  type="text" 
+                  id="title" 
+                  value={title} 
+                  onChange={e => setTitle(e.target.value)} 
+                  className={errors.title ? 'border-destructive' : ''} 
+                />
                 {errors.title && <p className="mt-1 text-sm text-destructive">{errors.title}</p>}
               </div>
 
@@ -201,7 +206,13 @@ const CreateInitiativeModal: React.FC<CreateInitiativeModalProps> = ({ isOpen, o
             
               <div>
                 <label htmlFor="skillsNeeded" className={labelClasses}>Skills Needed</label>
-                <input type="text" id="skillsNeeded" value={skillsNeeded} onChange={e => setSkillsNeeded(e.target.value)} className={inputClasses} placeholder="e.g. React, Figma, UI/UX" />
+                <Input 
+                  type="text" 
+                  id="skillsNeeded" 
+                  value={skillsNeeded} 
+                  onChange={e => setSkillsNeeded(e.target.value)} 
+                  placeholder="e.g. React, Figma, UI/UX" 
+                />
                 <p className="mt-1 text-xs text-muted-foreground">Enter skills separated by commas.</p>
               </div>
 
@@ -218,7 +229,13 @@ const CreateInitiativeModal: React.FC<CreateInitiativeModalProps> = ({ isOpen, o
             
               <div>
                 <label htmlFor="tags" className={labelClasses}>Tags</label>
-                <input type="text" id="tags" value={tags} onChange={e => setTags(e.target.value)} className={inputClasses} placeholder="e.g. Design System, AI/ML" />
+                <Input 
+                  type="text" 
+                  id="tags" 
+                  value={tags} 
+                  onChange={e => setTags(e.target.value)} 
+                  placeholder="e.g. Design System, AI/ML" 
+                />
                 <p className="mt-1 text-xs text-muted-foreground">Enter tags separated by commas to help others find your initiative.</p>
               </div>
             
@@ -263,9 +280,9 @@ const CreateInitiativeModal: React.FC<CreateInitiativeModalProps> = ({ isOpen, o
               </div>
             </div>
 
-            {/* Right Column - Document Upload Section */}
-            <div className="lg:border-l lg:border-border lg:pl-8">
-              <div className="sticky top-0">
+          {/* Right Column - Document Upload Section */}
+          <div className="lg:w-80 lg:flex-shrink-0 lg:border-l lg:border-border lg:pl-8">
+            <div className="sticky top-0">
                 <label className={labelClasses}>Upload Document for Data Extraction</label>
                 <p className="mt-1 text-xs text-muted-foreground mb-3">
                   Upload a PDF, Word, PowerPoint, Excel, or text file to automatically extract initiative details and pre-fill the form.
@@ -347,7 +364,6 @@ const CreateInitiativeModal: React.FC<CreateInitiativeModalProps> = ({ isOpen, o
                     <li>• You can edit any extracted data before creating</li>
                   </ul>
                 </div>
-              </div>
             </div>
           </div>
         </div>
