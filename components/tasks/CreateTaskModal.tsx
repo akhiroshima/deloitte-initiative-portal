@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/input';
 import { X } from 'lucide-react';
 import { User } from '../../types';
 import { CreateTaskData } from '../../services/api';
@@ -18,7 +19,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onCr
   const [assigneeId, setAssigneeId] = useState('');
   const [error, setError] = useState('');
   
-  const inputClasses = `mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-3 py-2`;
   const labelClasses = "block text-sm font-medium text-foreground";
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -56,12 +56,11 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onCr
         <div className="space-y-6 p-6">
           <div>
             <label htmlFor="title" className={labelClasses}>Task Title</label>
-            <input 
+            <Input 
               type="text" 
               id="title" 
               value={title} 
               onChange={e => setTitle(e.target.value)} 
-              className={inputClasses}
               required
             />
           </div>
@@ -72,7 +71,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onCr
               rows={4}
               value={description} 
               onChange={e => setDescription(e.target.value)} 
-              className={inputClasses}
+              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div>
@@ -81,7 +80,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onCr
               id="assigneeId"
               value={assigneeId}
               onChange={e => setAssigneeId(e.target.value)}
-              className={inputClasses}
+              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">Unassigned</option>
               {teamMembers.map(member => (

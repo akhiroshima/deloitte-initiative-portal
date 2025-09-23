@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from './ui/Button';
+import { Input } from './ui/input';
 import { X } from "lucide-react"
 import { User, Initiative } from '../types';
 import * as api from '../services/api';
@@ -57,7 +58,6 @@ const InviteToProjectModal: React.FC<InviteToProjectModalProps> = ({ isOpen, onC
     }
   };
   
-  const inputClasses = `mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-3 py-2`;
   const labelClasses = "block text-sm font-medium text-foreground";
 
   return (
@@ -83,7 +83,7 @@ const InviteToProjectModal: React.FC<InviteToProjectModalProps> = ({ isOpen, onC
                 id="initiative"
                 value={selectedInitiative}
                 onChange={(e) => setSelectedInitiative(e.target.value)}
-                className={inputClasses}
+                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={eligibleInitiatives.length === 0}
             >
                 <option value="">{eligibleInitiatives.length > 0 ? 'Choose a project...' : 'No eligible projects'}</option>

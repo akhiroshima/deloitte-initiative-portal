@@ -5,6 +5,7 @@ import { AVAILABLE_LOCATIONS } from '../constants';
 import { processDocumentForInitiative, isFileTypeSupported, getFileExtension } from '../services/documentParser';
 import { Button } from './ui/Button';
 import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import { X } from "lucide-react"
 import { FileText } from "lucide-react"
 import UserSearchSelect from './ui/UserSearchSelect';
@@ -189,7 +190,13 @@ const CreateInitiativeModal: React.FC<CreateInitiativeModalProps> = ({ isOpen, o
 
               <div>
                 <label htmlFor="description" className={labelClasses}>Description</label>
-                <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={4} className={`${inputClasses} ${errors.description ? 'border-destructive' : ''}`}></textarea>
+                <Textarea 
+                  id="description" 
+                  value={description} 
+                  onChange={e => setDescription(e.target.value)} 
+                  rows={4} 
+                  className={errors.description ? 'border-destructive' : ''} 
+                />
                 {errors.description && <p className="mt-1 text-sm text-destructive">{errors.description}</p>}
               </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/Button';
+import { Input } from './ui/input';
 import { X } from "lucide-react"
 import { HelpWanted } from '../types';
 import Modal from './ui/Modal';
@@ -17,7 +18,6 @@ const CreateHelpWantedModal: React.FC<CreateHelpWantedModalProps> = ({ isOpen, o
   const [status, setStatus] = useState<'Open' | 'Closed'>('Open');
   const [error, setError] = useState('');
 
-  const inputClasses = `mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-3 py-2`;
   const labelClasses = "block text-sm font-medium text-foreground";
 
   useEffect(() => {
@@ -59,23 +59,21 @@ const CreateHelpWantedModal: React.FC<CreateHelpWantedModalProps> = ({ isOpen, o
         <div className="space-y-6 p-6">
           <div>
             <label htmlFor="skill" className={labelClasses}>Required Skill</label>
-            <input 
+            <Input 
               type="text" 
               id="skill" 
               value={skill} 
               onChange={e => setSkill(e.target.value)} 
-              className={inputClasses}
               placeholder="e.g., D3.js, User Research"
             />
           </div>
           <div>
             <label htmlFor="hours" className={labelClasses}>Estimated Hours per Week</label>
-            <input 
+            <Input 
               type="number" 
               id="hours" 
               value={hours} 
               onChange={e => setHours(e.target.value)} 
-              className={inputClasses}
               placeholder="e.g., 8"
             />
           </div>
@@ -86,7 +84,7 @@ const CreateHelpWantedModal: React.FC<CreateHelpWantedModalProps> = ({ isOpen, o
                       id="status"
                       value={status}
                       onChange={e => setStatus(e.target.value as 'Open' | 'Closed')}
-                      className={inputClasses}
+                      className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                       <option value="Open">Open</option>
                       <option value="Closed">Closed</option>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/Button';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import { X } from "lucide-react"
 import { User } from '../types';
 import * as api from '../services/api';
@@ -20,7 +22,6 @@ const RequestToJoinModal: React.FC<RequestToJoinModalProps> = ({ isOpen, onClose
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   
-  const inputClasses = `mt-1 block w-full rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-3 py-2`;
   const labelClasses = "block text-sm font-medium text-foreground";
 
   useEffect(() => {
@@ -80,12 +81,11 @@ const RequestToJoinModal: React.FC<RequestToJoinModalProps> = ({ isOpen, onClose
           <div>
             <label htmlFor="message" className={labelClasses}>Your Message</label>
             <p className="text-xs text-muted-foreground mb-2">Why do you want to join this project? What skills can you bring?</p>
-            <textarea 
+            <Textarea 
               id="message" 
               rows={5}
               value={message}
               onChange={e => setMessage(e.target.value)}
-              className={inputClasses}
               placeholder="I'm excited about this initiative because..."
               aria-required="true"
             />
