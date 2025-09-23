@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card } from './ui/card';
+import { Card } from './ui/Card';
 import { typography } from '../tokens/typography';
 import { Sparkles } from "lucide-react"
 import { Initiative, User, Task, TaskStatus } from '../types';
 import * as llmService from '../services/llmService';
 import { AVAILABLE_LOCATIONS } from '../constants';
-import { Button } from './ui/button';
+import { Button } from './ui/Button';
 import UserCardSkeleton from './UserCardSkeleton';
 
 interface DashboardProps {

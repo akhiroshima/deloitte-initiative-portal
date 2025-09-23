@@ -5,7 +5,7 @@ import { twMerge } from 'tailwind-merge';
 import { Task, User } from '../../types';
 import * as api from '../../services/api';
 import { useToasts } from '../ui/ToastProvider';
-import { Card } from '../ui/card';
+import { Card } from '../ui/Card';
 import { Trash2 } from 'lucide-react';
 
 function cn(...inputs: any[]) {

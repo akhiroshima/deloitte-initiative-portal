@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from './ui/card';
+import { Card } from './ui/Card';
 import { typography } from '../tokens/typography';
 
 const DocsPage: React.FC = () => {

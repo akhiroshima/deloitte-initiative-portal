@@ -3,7 +3,7 @@ import { Task, TaskStatus, User } from '../../types';
 import * as api from '../../services/api';
 import TaskCard from './TaskCard';
 import CreateTaskModal from './CreateTaskModal';
-import { Button } from '../ui/button';
+import { Button } from '../ui/Button';
 import { Plus, FolderOpen } from 'lucide-react';
 import { useToasts } from '../ui/ToastProvider';
 

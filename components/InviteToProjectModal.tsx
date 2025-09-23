@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button } from './ui/button';
+import { Button } from './ui/Button';
 import { X } from "lucide-react"
 import { User, Initiative } from '../types';
 import * as api from '../services/api';

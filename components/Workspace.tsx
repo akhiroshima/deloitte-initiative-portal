@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Initiative, User, JoinRequest, JoinRequestStatus, Task } from '../types';
 import * as api from '../services/api';
-import { Card } from './ui/card';
-import { Button } from './ui/button';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
 import Tag from './ui/Tag';
 import { Pencil, X, Users, ClipboardList, CheckCircle, XCircle, FolderOpen } from 'lucide-react';
 import AcceptInviteModal from './AcceptInviteModal';

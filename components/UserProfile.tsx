@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { User, Initiative } from '../types';
 import * as api from '../services/api';
-import { Card } from './ui/card';
+import { Card } from './ui/Card';
 import Tag from './ui/Tag';
-import { Button } from './ui/button';
+import { Button } from './ui/Button';
 import { ArrowLeft } from "lucide-react"
 import { useToasts } from './ui/ToastProvider';
 import InviteToProjectModal from './InviteToProjectModal';

@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Initiative, User, InitiativeStatus } from '../types';
 import * as api from '../services/api';
 import Tag from './ui/Tag';
-import { Button } from './ui/button';
+import { Button } from './ui/Button';
 import RequestToJoinModal from './RequestToJoinModal';
 import { useToasts } from './ui/ToastProvider';
-import { Card } from './ui/card';
+import { Card } from './ui/Card';
 import { LoadingTransition } from './ui/LoadingTransition';
 
 interface InitiativeCardProps {

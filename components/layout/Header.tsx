@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Notification } from '../../types';
 import NotificationDropdown from '../notifications/NotificationDropdown';
 import { Sun, Moon, ArrowLeft, ChevronRight } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '../ui/Button';
 
 interface Breadcrumb {
   label: string;

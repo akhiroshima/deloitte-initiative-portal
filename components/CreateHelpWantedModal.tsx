@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from './ui/button';
+import { Button } from './ui/Button';
 import { X } from "lucide-react"
 import { HelpWanted } from '../types';
 import Modal from './ui/Modal';

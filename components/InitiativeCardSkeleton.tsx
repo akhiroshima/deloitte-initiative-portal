@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from './ui/card';
+import { Card } from './ui/Card';
 
 const InitiativeCardSkeleton: React.FC = () => {
     const basePulseClass = "bg-muted animate-pulse";

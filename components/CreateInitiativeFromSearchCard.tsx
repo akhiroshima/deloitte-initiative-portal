@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus } from "lucide-react"
 import { Sparkles } from "lucide-react"
-import { Button } from './ui/button';
+import { Button } from './ui/Button';
 
 interface CreateInitiativeFromSearchCardProps {
   onClick: () => void;

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { HelpWanted, Initiative, User } from '../types';
 import { getInitiativeById } from '../services/api';
-import { Card } from './ui/card';
-import { Button } from './ui/button';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
 import RequestToJoinModal from './RequestToJoinModal';
 
 interface HelpWantedCardProps {

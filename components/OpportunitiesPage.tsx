@@ -4,7 +4,7 @@ import * as llmService from '../services/llmService';
 import { AVAILABLE_LOCATIONS } from '../constants';
 import HelpWantedCard from './HelpWantedCard';
 import FilterDropdown from './ui/FilterDropdown';
-import { Card } from './ui/card';
+import { Card } from './ui/Card';
 import { typography } from '../tokens/typography';
 import { Sparkles } from "lucide-react"
 import { FolderOpen } from "lucide-react"

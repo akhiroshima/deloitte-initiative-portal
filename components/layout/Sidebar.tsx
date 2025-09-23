@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Users, BarChart3, FileText, Pin, UserCircle, Sparkles } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '../ui/Button';
 
 type View = 'bulletin' | 'dashboard' | 'workspace' | 'docs' | 'opportunities';
 

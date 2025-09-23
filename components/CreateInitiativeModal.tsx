@@ -3,7 +3,7 @@ import { User } from '../types';
 import { CreateInitiativeData } from '../services/api';
 import { AVAILABLE_LOCATIONS } from '../constants';
 import { processDocumentForInitiative, isFileTypeSupported, getFileExtension } from '../services/documentParser';
-import { Button } from './ui/button';
+import { Button } from './ui/Button';
 import { X } from "lucide-react"
 import { FileText } from "lucide-react"
 import UserSearchSelect from './ui/UserSearchSelect';
