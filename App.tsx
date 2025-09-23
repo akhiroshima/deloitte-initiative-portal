@@ -68,6 +68,8 @@ const App: React.FC = () => {
       if (data.authenticated && data.user) {
         setIsAuthenticated(true);
         setCurrentUser(data.user);
+        // Sync with API layer
+        api.setCurrentUserId(data.user.id);
         return true;
       } else {
         setIsAuthenticated(false);
@@ -131,6 +133,8 @@ const App: React.FC = () => {
   const handleAuthSuccess = async (user: User) => {
     setIsAuthenticated(true);
     setCurrentUser(user);
+    // Sync with API layer
+    api.setCurrentUserId(user.id);
     setShowAuthModal(false);
     await handleDataChange();
   };
@@ -143,6 +147,8 @@ const App: React.FC = () => {
     }
     setIsAuthenticated(false);
     setCurrentUser(null);
+    // Clear API layer sync
+    api.setCurrentUserId('');
     setShowAuthModal(true);
   };
 
