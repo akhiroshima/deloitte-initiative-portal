@@ -6,3 +6,6 @@ Thumbs.db
 node_modules/
 dist/
 .git/
+
+# Local Netlify folder
+.netlify

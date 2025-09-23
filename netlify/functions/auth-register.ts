@@ -5,9 +5,17 @@ import { createClient } from '@supabase/supabase-js'
 import { authRateLimit, createRateLimitResponse } from './_lib/rateLimit'
 import { withSecurity } from './_lib/security'
 
-const bodySchema = z.object({ username: z.string().min(1), password: z.string().min(1) })
+const bodySchema = z.object({ 
+  username: z.string().min(2).max(50), 
+  password: z.string().min(8),
+  name: z.string().min(2),
+  role: z.enum(['Designer', 'Developer', 'Lead', 'Manager']),
+  location: z.string().min(2),
+  skills: z.array(z.string()).min(1),
+  weeklyCapacityHrs: z.number().min(1).max(40)
+})
 
-const loginHandler: Handler = async (event) => {
+const registerHandler: Handler = async (event) => {
   try {
     if (event.httpMethod !== 'POST') {
       return { statusCode: 405, body: 'Method Not Allowed' }
@@ -25,10 +33,10 @@ const loginHandler: Handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: parsed.error.message }) }
     }
 
-    const { username, password } = parsed.data
+    const { username, password, name, role, location, skills, weeklyCapacityHrs } = parsed.data
     const allowedDomain = (process.env.ALLOWED_EMAIL_DOMAIN || 'deloitte.com').toLowerCase()
     
-    // Convert username to email format
+    // Construct email from username and allowed domain
     const emailLower = `${username.toLowerCase().trim()}@${allowedDomain}`
 
     // Initialize Supabase client
@@ -40,29 +48,50 @@ const loginHandler: Handler = async (event) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Get user from database
-    const { data: user, error } = await supabase
+    // Check if user already exists
+    const { data: existingUser } = await supabase
       .from('users')
-      .select('*')
+      .select('id')
       .eq('email', emailLower)
       .single()
 
-    if (error || !user) {
-      return { statusCode: 401, body: JSON.stringify({ error: 'Invalid credentials' }) }
+    if (existingUser) {
+      return { statusCode: 409, body: JSON.stringify({ error: 'User already exists' }) }
     }
 
-    // Verify password
+    // Hash password (in production, use proper password hashing)
     const hashedPassword = await hashPassword(password)
-    if (user.password_hash !== hashedPassword) {
-      return { statusCode: 401, body: JSON.stringify({ error: 'Invalid credentials' }) }
+
+    // Create user in database
+    const { data: newUser, error } = await supabase
+      .from('users')
+      .insert({
+        email: emailLower,
+        username: username.toLowerCase().trim(),
+        password_hash: hashedPassword,
+        name,
+        role,
+        location,
+        skills,
+        weekly_capacity_hrs: weeklyCapacityHrs,
+        avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Database error:', error)
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to create user' }) }
     }
 
-    const token = await signSession(emailLower, allowedDomain, 60 * 60 * 24) // 24h
+    // Create session
+    const token = await signSession(emailLower, domain, 60 * 60 * 24) // 24h
     const isSecure = (event.headers['x-forwarded-proto'] || '').includes('https')
     const cookie = buildSessionCookie(token, isSecure)
 
     return {
-      statusCode: 200,
+      statusCode: 201,
       headers: {
         'Set-Cookie': cookie,
         'Content-Type': 'application/json'
@@ -70,14 +99,15 @@ const loginHandler: Handler = async (event) => {
       body: JSON.stringify({ 
         ok: true, 
         user: { 
-          id: user.id,
-          email: emailLower, 
-          name: user.name,
-          role: user.role,
-          location: user.location,
-          skills: user.skills,
-          weeklyCapacityHrs: user.weekly_capacity_hrs,
-          avatarUrl: user.avatar_url
+          id: newUser.id,
+          email: emailLower,
+          username: newUser.username,
+          name,
+          role,
+          location,
+          skills,
+          weeklyCapacityHrs,
+          avatarUrl: newUser.avatar_url
         } 
       })
     }
@@ -87,7 +117,7 @@ const loginHandler: Handler = async (event) => {
   }
 }
 
-export const handler = withSecurity(loginHandler);
+export const handler = withSecurity(registerHandler);
 
 // Simple password hashing (in production, use bcrypt or similar)
 async function hashPassword(password: string): Promise<string> {

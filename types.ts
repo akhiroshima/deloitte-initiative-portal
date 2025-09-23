@@ -14,11 +14,14 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'Designer' | 'Developer' | 'Lead' | 'Manager';
+  username: string;
+  role: 'Designer' | 'Developer' | 'Lead' | 'Manager' | 'Admin';
   skills: string[];
   location: string;
   weeklyCapacityHrs: number;
   avatarUrl: string;
+  isAdmin?: boolean;
+  password_hash?: string;
 }
 
 export type InitiativeStatus = 'Searching Talent' | 'In Progress' | 'Under Review' | 'Completed';

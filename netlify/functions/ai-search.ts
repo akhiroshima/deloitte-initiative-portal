@@ -1,6 +1,8 @@
 import type { Handler } from '@netlify/functions'
 import { Pool } from 'pg'
 import { z } from 'zod'
+import { searchRateLimit, createRateLimitResponse } from './_lib/rateLimit'
+import { withSecurity } from './_lib/security'
 
 // Env: set these in Netlify UI or netlify.toml [functions.environment]
 const DATABASE_URL = process.env.DATABASE_URL
@@ -69,10 +71,17 @@ function toSqlArray(arr?: string[]){
 }
 
 // --- Handler ---
-export const handler: Handler = async (event) => {
+const searchHandler: Handler = async (event) => {
   try {
     if (event.httpMethod !== 'POST') {
       return { statusCode: 405, body: 'Method Not Allowed' }
+    }
+
+    // Apply rate limiting
+    const rateLimitResult = searchRateLimit(event);
+    const rateLimitResponse = createRateLimitResponse(rateLimitResult);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
     const parsed = requestSchema.safeParse(JSON.parse(event.body || '{}'))
     if (!parsed.success) {
@@ -178,3 +187,5 @@ Initiatives:\n${topInits.map(i => `- ${i.id}: ${i.title} | ${i.desc?.slice(0,160
     return { statusCode: 500, body: JSON.stringify({ error: err.message || 'Server error' }) }
   }
 }
+
+export const handler = withSecurity(searchHandler);

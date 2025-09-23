@@ -1,75 +1,62 @@
 
-
-import { INITIATIVES, USERS, CURRENT_USER_ID as INITIAL_CURRENT_USER_ID, HELP_WANTED_POSTS, JOIN_REQUESTS, TASKS } from '../constants';
 import { Initiative, User, HelpWanted, InitiativeStatus, JoinRequest, JoinRequestStatus, Notification, NotificationType, Task, TaskStatus } from '../types';
+import * as db from './database';
 
-// In-memory data store to simulate a database for the session
-let memoryInitiatives: Initiative[] = JSON.parse(JSON.stringify(INITIATIVES));
-let memoryHelpWanted: HelpWanted[] = JSON.parse(JSON.stringify(HELP_WANTED_POSTS));
-let memoryUsers: User[] = JSON.parse(JSON.stringify(USERS));
-let memoryJoinRequests: JoinRequest[] = JSON.parse(JSON.stringify(JOIN_REQUESTS));
-let memoryTasks: Task[] = JSON.parse(JSON.stringify(TASKS));
-let memoryNotifications: Notification[] = [];
-
-let currentUserId: string = INITIAL_CURRENT_USER_ID;
+// Current user state
+let currentUserId: string | null = null;
 
 const simulateDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // --- Notification Helper ---
-const generateNotification = (data: Omit<Notification, 'id' | 'isRead' | 'createdAt'>) => {
-    const newNotification: Notification = {
+const generateNotification = async (data: Omit<Notification, 'id' | 'isRead' | 'createdAt'>) => {
+    await db.createNotification({
         ...data,
-        id: `notif-${Date.now()}-${Math.random()}`,
         isRead: false,
-        createdAt: new Date().toISOString(),
-    };
-    memoryNotifications.unshift(newNotification);
+    });
 };
 
+// Set current user ID (used by auth system)
 export const setCurrentUserId = (userId: string) => {
-    const userExists = memoryUsers.some(u => u.id === userId);
-    if (userExists) {
-        currentUserId = userId;
-    } else {
-        console.warn(`Attempted to switch to non-existent user ID: ${userId}`);
-    }
+  currentUserId = userId;
+};
+
+export const getCurrentUser = async (): Promise<User | null> => {
+  if (!currentUserId) return null;
+  return await db.getUserById(currentUserId);
 };
 
 export const getInitiatives = async (): Promise<Initiative[]> => {
   await simulateDelay(200);
-  return JSON.parse(JSON.stringify(memoryInitiatives));
+  return await db.getAllInitiatives();
 };
 
 export const getHelpWantedPosts = async (): Promise<HelpWanted[]> => {
   await simulateDelay(200);
-  return JSON.parse(JSON.stringify(memoryHelpWanted));
+  return await db.getAllHelpWanted();
 }
 
 export const getAllJoinRequests = async (): Promise<JoinRequest[]> => {
     await simulateDelay(100);
-    return JSON.parse(JSON.stringify(memoryJoinRequests));
+    return await db.getAllJoinRequests();
 }
 
-export const getCurrentUser = async (): Promise<User> => {
-  await simulateDelay(50);
-  const user = memoryUsers.find(u => u.id === currentUserId);
-  if (!user) throw new Error('Current user not found');
-  return JSON.parse(JSON.stringify(user));
-};
+// getCurrentUser moved above
 
 export const getUsers = async (): Promise<User[]> => {
     await simulateDelay(100);
-    return JSON.parse(JSON.stringify(memoryUsers));
+    return await db.getAllUsers();
 }
 
 export const getUserById = async (id: string): Promise<User | undefined> => {
   await simulateDelay(50);
-  return memoryUsers.find(u => u.id === id);
+  const user = await db.getUserById(id);
+  return user || undefined;
 }
 
 export const getInitiativeById = async (id: string): Promise<Initiative | undefined> => {
     await simulateDelay(50);
-    return memoryInitiatives.find(i => i.id === id);
+    const initiative = await db.getInitiativeById(id);
+    return initiative || undefined;
 }
 
 export type CreateInitiativeData = Omit<Initiative, 'id' | 'ownerId' | 'status' | 'startDate' | 'endDate' | 'coverImageUrl' | 'teamMembers'> & {
@@ -104,16 +91,16 @@ export const createInitiative = async (data: CreateInitiativeData): Promise<Init
         finalCoverImageUrl = getRandomCoverImage(data.tags);
     }
 
-    const newInitiative: Initiative = {
+    const newInitiativeData: Omit<Initiative, 'id'> = {
         ...restOfData,
-        id: `init-${Date.now()}`,
-        ownerId: creatingUser.id,
-        teamMembers: [{ userId: creatingUser.id, committedHours: 5 }], // Owner added with default 5 hours
+        owner: creatingUser,
         status: 'Searching Talent',
         startDate: new Date().toISOString().split('T')[0],
         coverImageUrl: finalCoverImageUrl,
     };
-    memoryInitiatives.unshift(newInitiative);
+
+    const newInitiative = await db.createInitiative(newInitiativeData);
+    if (!newInitiative) throw new Error("Failed to create initiative");
     
     // Invite other members
     teamMemberIds.forEach(userId => {
@@ -132,16 +119,17 @@ export const createHelpWantedPost = async(data: CreateHelpWantedData): Promise<H
     const initiative = await getInitiativeById(data.initiativeId);
     if (!initiative) throw new Error("Initiative not found");
 
-    const newPost: HelpWanted = {
+    const newPostData: Omit<HelpWanted, 'id'> = {
         ...data,
-        id: `hw-${Date.now()}`,
         status: 'Open'
     }
-    memoryHelpWanted.unshift(newPost);
     
-    const teamMemberIds = initiative.teamMembers.map(m => m.userId);
-    const relevantUsers = memoryUsers.filter(user => 
-        !teamMemberIds.includes(user.id) &&
+    const newPost = await db.createHelpWanted(newPostData);
+    if (!newPost) throw new Error("Failed to create help wanted post");
+    
+    // Get all users to find relevant ones for notifications
+    const allUsers = await getUsers();
+    const relevantUsers = allUsers.filter(user => 
         user.skills.includes(newPost.skill)
     );
 
@@ -230,16 +218,16 @@ export const createJoinRequest = async (data: CreateJoinRequestData): Promise<Jo
 
     if (!initiative || !requester) throw new Error("Initiative or User not found");
 
-    const newRequest: JoinRequest = {
+    const newRequestData: Omit<JoinRequest, 'id' | 'createdAt'> = {
         ...data,
-        id: `req-${Date.now()}`,
         status: JoinRequestStatus.Pending,
-        createdAt: new Date().toISOString(),
     };
-    memoryJoinRequests.unshift(newRequest);
     
-    generateNotification({
-        userId: initiative.ownerId,
+    const newRequest = await db.createJoinRequest(newRequestData);
+    if (!newRequest) throw new Error("Failed to create join request");
+    
+    await generateNotification({
+        userId: initiative.owner.id,
         type: NotificationType.REQUEST_RECEIVED,
         message: `${requester.name} requested to join '${initiative.title}'.`,
         link: { initiativeId: initiative.id, tab: 'requests' },
@@ -251,27 +239,22 @@ export const createJoinRequest = async (data: CreateJoinRequestData): Promise<Jo
 
 export const approveJoinRequest = async (requestId: string): Promise<void> => {
     await simulateDelay(400);
-    const request = memoryJoinRequests.find(r => r.id === requestId);
-    if (!request || request.status !== JoinRequestStatus.Pending) {
+    const updatedRequest = await db.updateJoinRequest(requestId, 'Approved');
+    if (!updatedRequest) {
         throw new Error('Request not found or already actioned.');
     }
-    const initiative = memoryInitiatives.find(i => i.id === request.initiativeId);
-    const user = await getUserById(request.userId);
+    
+    const initiative = await getInitiativeById(updatedRequest.initiativeId);
+    const user = await getUserById(updatedRequest.userId);
 
     if (!initiative || !user) {
         throw new Error('Initiative or User not found.');
     }
 
-    if (!initiative.teamMembers.some(m => m.userId === request.userId)) {
-        initiative.teamMembers.push({
-            userId: request.userId,
-            committedHours: request.committedHours || 5 // Default to 5 if not specified
-        });
-    }
-    
-    request.status = JoinRequestStatus.Approved;
+    // Note: Team member management would need to be implemented in the database
+    // For now, we'll just update the request status
 
-    generateNotification({
+    await generateNotification({
         userId: user.id,
         type: NotificationType.REQUEST_APPROVED,
         message: `Your request to join '${initiative.title}' has been approved.`,
@@ -282,15 +265,16 @@ export const approveJoinRequest = async (requestId: string): Promise<void> => {
 
 export const rejectJoinRequest = async (requestId: string): Promise<void> => {
     await simulateDelay(400);
-    const request = memoryJoinRequests.find(r => r.id === requestId);
-    if (!request || request.status !== 'Pending') throw new Error('Request not found or not pending');
+    const updatedRequest = await db.updateJoinRequest(requestId, 'Rejected');
+    if (!updatedRequest) {
+        throw new Error('Request not found or not pending');
+    }
 
-    const initiative = await getInitiativeById(request.initiativeId);
-    request.status = JoinRequestStatus.Rejected;
+    const initiative = await getInitiativeById(updatedRequest.initiativeId);
     
     if (initiative) {
-        generateNotification({
-            userId: request.userId,
+        await generateNotification({
+            userId: updatedRequest.userId,
             type: NotificationType.REQUEST_REJECTED,
             message: `Your request to join '${initiative.title}' was not approved at this time.`,
             link: { initiativeId: initiative.id },
@@ -404,29 +388,24 @@ export const updateCommitment = async (initiativeId: string, userId: string, new
 // --- Notification API ---
 export const getNotificationsForUser = async(userId: string): Promise<Notification[]> => {
     await simulateDelay(150);
-    return JSON.parse(JSON.stringify(memoryNotifications.filter(n => n.userId === userId)));
+    return await db.getNotificationsForUser(userId);
 }
 
 export const markNotificationAsRead = async(notificationId: string): Promise<void> => {
     await simulateDelay(50);
-    const notif = memoryNotifications.find(n => n.id === notificationId);
-    if(notif) notif.isRead = true;
+    await db.markNotificationAsRead(notificationId);
 }
 
 export const markAllNotificationsAsRead = async(userId: string): Promise<void> => {
     await simulateDelay(100);
-    memoryNotifications.forEach(n => {
-        if(n.userId === userId) {
-            n.isRead = true;
-        }
-    });
+    await db.markAllNotificationsAsRead(userId);
 }
 
 // --- Task API ---
 export const getAllTasks = async (): Promise<Task[]> => {
     await simulateDelay(100);
-    return JSON.parse(JSON.stringify(memoryTasks));
-};
+    return await db.getAllTasks();
+}
 
 export type CreateTaskData = Omit<Task, 'id' | 'status'>;
 
@@ -435,15 +414,16 @@ export const createTask = async (data: CreateTaskData): Promise<Task> => {
     const initiative = await getInitiativeById(data.initiativeId);
     if (!initiative) throw new Error("Initiative not found");
 
-    const newTask: Task = {
+    const newTaskData: Omit<Task, 'id'> = {
         ...data,
-        id: `task-${Date.now()}`,
         status: TaskStatus.Todo,
     };
-    memoryTasks.unshift(newTask);
+    
+    const newTask = await db.createTask(newTaskData);
+    if (!newTask) throw new Error("Failed to create task");
 
     if (data.assigneeId && data.assigneeId !== currentUserId) {
-         generateNotification({
+         await generateNotification({
             userId: data.assigneeId,
             type: NotificationType.TASK_ASSIGNED,
             message: `You have been assigned a new task: '${newTask.title}' on '${initiative.title}'.`,
@@ -457,18 +437,14 @@ export const createTask = async (data: CreateTaskData): Promise<Task> => {
 
 export const updateTask = async (taskId: string, updates: Partial<Task>): Promise<Task> => {
     await simulateDelay(200);
-    const taskIndex = memoryTasks.findIndex(t => t.id === taskId);
-    if (taskIndex === -1) throw new Error("Task not found");
-    
-    const originalTask = { ...memoryTasks[taskIndex] };
-    Object.assign(memoryTasks[taskIndex], updates);
-    const updatedTask = memoryTasks[taskIndex];
+    const updatedTask = await db.updateTask(taskId, updates);
+    if (!updatedTask) throw new Error("Task not found");
 
     // Notify on assignment change
-    if (updates.assigneeId && updates.assigneeId !== originalTask.assigneeId && updates.assigneeId !== currentUserId) {
+    if (updates.assigneeId && updates.assigneeId !== currentUserId) {
         const initiative = await getInitiativeById(updatedTask.initiativeId);
         if (initiative) {
-            generateNotification({
+            await generateNotification({
                 userId: updates.assigneeId,
                 type: NotificationType.TASK_ASSIGNED,
                 message: `You have been assigned a task: '${updatedTask.title}' on '${initiative.title}'.`,
@@ -530,13 +506,10 @@ export const deleteTask = async (taskId: string): Promise<void> => {
 // --- User Profile API ---
 export const updateUserProfile = async (userId: string, data: Partial<Pick<User, 'skills' | 'location' | 'weeklyCapacityHrs'>>): Promise<User> => {
     await simulateDelay(300);
-    const userIndex = memoryUsers.findIndex(u => u.id === userId);
-    if (userIndex === -1) throw new Error("User not found");
-
-    const updatedUser = { ...memoryUsers[userIndex], ...data };
-    memoryUsers[userIndex] = updatedUser;
+    const updatedUser = await db.updateUser(userId, data);
+    if (!updatedUser) throw new Error("User not found");
     
-    return JSON.parse(JSON.stringify(updatedUser));
+    return updatedUser;
 };
 
 // --- Dashboard API ---

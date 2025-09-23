@@ -8,6 +8,10 @@ import InitiativeDetail from './components/InitiativeDetail';
 import UserProfile from './components/UserProfile';
 import DocsPage from './components/DocsPage';
 import OpportunitiesPage from './components/OpportunitiesPage';
+import AuthModal from './components/AuthModal';
+import ErrorBoundary from './components/ErrorBoundary';
+import { OnboardingBanner } from './components/OnboardingBanner';
+import { NetworkError } from './components/NetworkError';
 import * as api from './services/api';
 import { Initiative, User, HelpWanted, JoinRequest, Notification, Task } from './types';
 import LoadingSkeleton from './components/ui/LoadingSkeleton';
@@ -40,6 +44,12 @@ const App: React.FC = () => {
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [networkError, setNetworkError] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -48,20 +58,44 @@ const App: React.FC = () => {
     root.classList.add(theme);
   }, [theme]);
 
-  const handleDataChange = useCallback(async () => {
-    // Don't set loading to true here to avoid full-screen loader on re-fetches
-    if (!api.getCurrentUser) return;
+  // Check authentication status
+  const checkAuth = useCallback(async () => {
     try {
-      const currentUserData = await api.getCurrentUser();
-      setCurrentUser(currentUserData);
+      setAuthLoading(true);
+      const response = await fetch('/api/auth-me');
+      const data = await response.json();
       
+      if (data.authenticated && data.user) {
+        setIsAuthenticated(true);
+        setCurrentUser(data.user);
+        return true;
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+        return false;
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      return false;
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  const handleDataChange = useCallback(async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      setNetworkError(false);
       const [initiativesData, helpWantedData, usersData, joinRequestsData, tasksData, notificationsData] = await Promise.all([
         api.getInitiatives(),
         api.getHelpWantedPosts(),
         api.getUsers(),
         api.getAllJoinRequests(),
         api.getAllTasks(),
-        api.getNotificationsForUser(currentUserData.id)
+        api.getNotificationsForUser(currentUser?.id || '')
       ]);
       setInitiatives(initiativesData);
       setHelpWanted(helpWantedData);
@@ -72,23 +106,50 @@ const App: React.FC = () => {
 
     } catch (error) {
       console.error("Failed to fetch app data:", error);
+      setNetworkError(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated, currentUser]);
 
   useEffect(() => {
-    setLoading(true);
-    handleDataChange();
-  }, [handleDataChange]);
+    const initializeApp = async () => {
+      setLoading(true);
+      const authResult = await checkAuth();
+      if (authResult) {
+        await handleDataChange();
+      } else {
+        setShowAuthModal(true);
+        setLoading(false);
+      }
+    };
+    
+    initializeApp();
+  }, [checkAuth]);
 
-  const handleSwitchUser = async (userId: string) => {
-    setLoading(true);
-    setSelectedInitiativeId(null); 
-    setSelectedUserId(null);
-    setActiveView('bulletin');
-    api.setCurrentUserId(userId);
+  // Authentication handlers
+  const handleAuthSuccess = async (user: User) => {
+    setIsAuthenticated(true);
+    setCurrentUser(user);
+    setShowAuthModal(false);
     await handleDataChange();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth-logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setShowAuthModal(true);
+  };
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    await handleDataChange();
+    setIsRetrying(false);
   };
   
   const handleSetView = (view: View) => {
@@ -311,39 +372,76 @@ const App: React.FC = () => {
   
   const viewKey = activeView + (selectedInitiativeId || '') + (selectedUserId || '');
 
-  return (
-    <div className="flex h-screen bg-background text-foreground">
-      <Sidebar 
-        activeView={activeView} 
-        setActiveView={handleSetView} 
-        isPinned={isSidebarPinned}
-        onTogglePin={() => setIsSidebarPinned(p => !p)}
-      />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header 
-            currentUser={currentUser}
-            allUsers={users}
-            onSwitchUser={handleSwitchUser}
-            onSelectUser={handleSelectUser}
-            notifications={notifications}
-            onNotificationClick={handleNotificationClick}
-            onMarkAllRead={handleMarkAllRead}
-            theme={theme}
-            toggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-            breadcrumbs={getBreadcrumbs()}
-            pageTitle={getPageTitle()}
-            onBack={handleBack}
-            showBackButton={!!(selectedInitiativeId || selectedUserId)}
-        />
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            <LoadingTransition key={viewKey} delay={50} variant="fade">
-              {renderView()}
-            </LoadingTransition>
-          </div>
-        </main>
+  // Show loading screen while checking authentication or loading data
+  if (authLoading || loading) {
+    return (
+      <div className="flex h-screen bg-background text-foreground items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">
+            {authLoading ? 'Checking authentication...' : 'Loading...'}
+          </p>
+        </div>
       </div>
-    </div>
+    );
+  }
+
+  // Show auth modal if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-screen bg-background text-foreground items-center justify-center">
+        <AuthModal 
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      <div className="flex h-screen bg-background text-foreground">
+        <Sidebar 
+          activeView={activeView} 
+          setActiveView={handleSetView} 
+          isPinned={isSidebarPinned}
+          onTogglePin={() => setIsSidebarPinned(p => !p)}
+        />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header 
+              currentUser={currentUser}
+              allUsers={users}
+              onSwitchUser={() => {}} // Removed for production
+              onSelectUser={handleSelectUser}
+              notifications={notifications}
+              onNotificationClick={handleNotificationClick}
+              onMarkAllRead={handleMarkAllRead}
+              theme={theme}
+              toggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+              breadcrumbs={getBreadcrumbs()}
+              pageTitle={getPageTitle()}
+              onBack={handleBack}
+              showBackButton={!!(selectedInitiativeId || selectedUserId)}
+              onLogout={handleLogout}
+          />
+            <main className="flex-1 overflow-y-auto">
+              <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                {showOnboarding && (
+                  <OnboardingBanner onDismiss={() => setShowOnboarding(false)} />
+                )}
+                {networkError ? (
+                  <NetworkError onRetry={handleRetry} isRetrying={isRetrying} />
+                ) : (
+                  <LoadingTransition key={viewKey} delay={50} variant="fade">
+                    {renderView()}
+                  </LoadingTransition>
+                )}
+              </div>
+            </main>
+        </div>
+      </div>
+    </ErrorBoundary>
   );
 };
 

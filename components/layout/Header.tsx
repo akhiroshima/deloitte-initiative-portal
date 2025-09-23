@@ -12,7 +12,6 @@ interface Breadcrumb {
 interface HeaderProps {
     currentUser: User | null;
     allUsers: User[];
-    onSwitchUser: (userId: string) => void;
     onSelectUser: (userId: string) => void;
     notifications: Notification[];
     onNotificationClick: (notification: Notification) => void;
@@ -23,9 +22,10 @@ interface HeaderProps {
     pageTitle: string;
     onBack: () => void;
     showBackButton: boolean;
+    onLogout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentUser, allUsers, onSwitchUser, onSelectUser, notifications, onNotificationClick, onMarkAllRead, theme, toggleTheme, breadcrumbs, pageTitle, onBack, showBackButton }) => {
+const Header: React.FC<HeaderProps> = ({ currentUser, allUsers, onSelectUser, notifications, onNotificationClick, onMarkAllRead, theme, toggleTheme, breadcrumbs, pageTitle, onBack, showBackButton, onLogout }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -41,10 +41,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser, allUsers, onSwitchUser, on
     };
   }, []);
 
-  const handleSwitch = (userId: string) => {
-    onSwitchUser(userId);
-    setIsDropdownOpen(false);
-  };
+  // Removed handleSwitch - not needed for production
 
   const handleViewProfile = () => {
     if(currentUser) {
@@ -145,25 +142,10 @@ const Header: React.FC<HeaderProps> = ({ currentUser, allUsers, onSwitchUser, on
                         My Workspace
                       </button>
                   </div>
-                  <div className="py-1" role="none">
-                      <div className="px-4 py-2 text-xs font-semibold text-muted-foreground border-b border-border">Switch User (Dev Tool)</div>
-                      <div className="max-h-64 overflow-y-auto">
-                          {allUsers.map(u => (
-                              <button
-                                  key={u.id}
-                                  onClick={() => handleSwitch(u.id)}
-                                  className={`flex w-full items-center justify-between px-4 py-2 text-sm ${
-                                      u.id === currentUser?.id 
-                                      ? 'bg-primary/10 text-primary font-semibold' 
-                                      : 'hover:bg-muted'
-                                  }`}
-                                  role="menuitem"
-                              >
-                                  <span>{u.name}</span>
-                                  {u.id === currentUser?.id && <span className="text-xs">(Current)</span>}
-                              </button>
-                          ))}
-                      </div>
+                  <div className="p-2" role="none">
+                     <button onClick={onLogout} className="block w-full text-left rounded-md px-3 py-2 text-sm hover:bg-muted text-destructive" role="menuitem">
+                        Sign Out
+                      </button>
                   </div>
               </div>
           )}
