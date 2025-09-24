@@ -1,20 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { Initiative, User, HelpWanted, JoinRequest, Task, Notification } from '../types';
-
-// Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-if (!supabaseUrl || !supabaseKey) {
-  console.warn('Supabase credentials not found. Using mock data.');
-}
-
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-
-// Helper function to check if database is available
-const isDatabaseAvailable = () => {
-  return supabase !== null;
-};
+import { supabase, isDatabaseAvailable } from './supabase';
 
 // Users CRUD
 export const createUser = async (userData: Omit<User, 'id'>): Promise<User | null> => {

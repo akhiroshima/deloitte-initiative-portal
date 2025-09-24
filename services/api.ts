@@ -1,12 +1,7 @@
 
 import { Initiative, User, HelpWanted, InitiativeStatus, JoinRequest, JoinRequestStatus, Notification, NotificationType, Task, TaskStatus } from '../types';
 import * as db from './database';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client for direct operations
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from './supabase';
 
 // Current user state
 let currentUserId: string | null = null;
