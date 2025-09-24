@@ -167,32 +167,30 @@ export const deleteHelpWantedPost = async (postId: string): Promise<void> => {
 
 export const updateInitiativeStatus = async (initiativeId: string, status: InitiativeStatus): Promise<Initiative | undefined> => {
     await simulateDelay(300);
-    const initiative = memoryInitiatives.find(i => i.id === initiativeId);
+    const initiative = await db.getInitiativeById(initiativeId);
     if (initiative) {
-        initiative.status = status;
+        const updateData: any = { status };
         if (status === 'Completed') {
-            initiative.endDate = new Date().toISOString().split('T')[0];
+            updateData.endDate = new Date().toISOString().split('T')[0];
         }
+        const updatedInitiative = await db.updateInitiative(initiativeId, updateData);
+        return updatedInitiative;
     }
-    return initiative;
+    return undefined;
 }
 
 export const deleteInitiative = async (initiativeId: string): Promise<void> => {
     await simulateDelay(500);
-    const initiativeIndex = memoryInitiatives.findIndex(i => i.id === initiativeId);
-    if (initiativeIndex === -1) throw new Error("Initiative not found");
     
-    const initiative = memoryInitiatives[initiativeIndex];
+    // Get the initiative to check ownership
+    const initiative = await db.getInitiativeById(initiativeId);
+    if (!initiative) throw new Error("Initiative not found");
+    
     if (initiative.ownerId !== currentUserId) throw new Error("Only the owner can delete this initiative");
 
-    // Cascade delete related items
-    memoryTasks = memoryTasks.filter(t => t.initiativeId !== initiativeId);
-    memoryHelpWanted = memoryHelpWanted.filter(p => p.initiativeId !== initiativeId);
-    memoryJoinRequests = memoryJoinRequests.filter(r => r.initiativeId !== initiativeId);
-    memoryNotifications = memoryNotifications.filter(n => n.initiativeId !== initiativeId);
-
-    // Delete the initiative
-    memoryInitiatives.splice(initiativeIndex, 1);
+    // Delete the initiative (cascade delete will handle related items)
+    const success = await db.deleteInitiative(initiativeId);
+    if (!success) throw new Error("Failed to delete initiative");
 };
 
 
@@ -200,7 +198,7 @@ export const deleteInitiative = async (initiativeId: string): Promise<void> => {
 
 export const getJoinRequestsForInitiative = async (initiativeId: string): Promise<JoinRequest[]> => {
     await simulateDelay(150);
-    return JSON.parse(JSON.stringify(memoryJoinRequests.filter(req => req.initiativeId === initiativeId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())));
+    return await db.getJoinRequestsForInitiative(initiativeId);
 };
 
 export interface CreateJoinRequestData {
@@ -375,13 +373,18 @@ export const declineInvite = async (requestId: string): Promise<void> => {
 
 export const updateCommitment = async (initiativeId: string, userId: string, newHours: number): Promise<void> => {
     await simulateDelay(200);
-    const initiative = memoryInitiatives.find(i => i.id === initiativeId);
+    const initiative = await db.getInitiativeById(initiativeId);
     if (!initiative) throw new Error("Initiative not found");
 
     const member = initiative.teamMembers.find(m => m.userId === userId);
     if (!member) throw new Error("Team member not found");
 
-    member.committedHours = newHours;
+    // Update the team member's committed hours
+    const updatedTeamMembers = initiative.teamMembers.map(m => 
+        m.userId === userId ? { ...m, committedHours: newHours } : m
+    );
+    
+    await db.updateInitiative(initiativeId, { teamMembers: updatedTeamMembers });
 };
 
 
@@ -515,8 +518,8 @@ export const updateUserProfile = async (userId: string, data: Partial<Pick<User,
 // --- Dashboard API ---
 export const getDashboardData = async () => {
     await simulateDelay(500);
-    const initiatives = memoryInitiatives;
-    const users = memoryUsers;
+    const initiatives = await db.getAllInitiatives();
+    const users = await db.getAllUsers();
 
     const activeInitiatives = initiatives.filter(i => i.status === 'In Progress').length;
     

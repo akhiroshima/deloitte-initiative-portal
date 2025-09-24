@@ -557,6 +557,67 @@ export const getAllJoinRequests = async (): Promise<JoinRequest[]> => {
   }
 };
 
+export const getJoinRequestsForInitiative = async (initiativeId: string): Promise<JoinRequest[]> => {
+  if (!isDatabaseAvailable()) return [];
+  
+  try {
+    const { data, error } = await supabase!
+      .from('join_requests')
+      .select(`
+        *,
+        user:users(*),
+        initiative:initiatives(*)
+      `)
+      .eq('initiative_id', initiativeId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data.map(request => ({
+      id: request.id,
+      initiativeId: request.initiative_id,
+      userId: request.user_id,
+      message: request.message,
+      status: request.status,
+      createdAt: request.created_at,
+      user: {
+        id: request.user.id,
+        name: request.user.name,
+        email: request.user.email,
+        role: request.user.role,
+        skills: request.user.skills || [],
+        location: request.user.location,
+        weeklyCapacityHrs: request.user.weekly_capacity_hrs,
+        avatarUrl: request.user.avatar_url
+      },
+      initiative: {
+        id: request.initiative.id,
+        title: request.initiative.title,
+        description: request.initiative.description,
+        status: request.initiative.status,
+        startDate: request.initiative.start_date,
+        endDate: request.initiative.end_date,
+        skillsNeeded: request.initiative.skills_needed || [],
+        locations: request.initiative.locations || [],
+        tags: request.initiative.tags || [],
+        coverImageUrl: request.initiative.cover_image_url,
+        owner: {
+          id: '',
+          name: '',
+          email: '',
+          role: 'Developer',
+          skills: [],
+          location: '',
+          weeklyCapacityHrs: 40,
+          avatarUrl: ''
+        }
+      }
+    }));
+  } catch (error) {
+    console.error('Error fetching join requests for initiative:', error);
+    return [];
+  }
+};
+
 export const createJoinRequest = async (request: Omit<JoinRequest, 'id' | 'createdAt'>): Promise<JoinRequest | null> => {
   if (!isDatabaseAvailable()) return null;
   
