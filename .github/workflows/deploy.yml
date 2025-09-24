@@ -1,60 +1,151 @@
-name: Deploy to Netlify
+name: Deploy to Environments
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main        # Production deployment
+      - develop     # Development deployment
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
 
 jobs:
-  build-and-test:
+  # Test job runs on all PRs and pushes
+  test:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
-      - name: Run type check
+
+      - name: Run linting
+        run: npm run lint --if-present
+
+      - name: Run type checking
+        run: npx tsc --noEmit
+
+      - name: Build project
         run: npm run build
-        
-      - name: Build Storybook
-        run: npm run build-storybook
-        
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-files
-          path: dist/
-          
-  deploy-development:
-    if: github.ref == 'refs/heads/develop'
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Deploy to Development
-        run: |
-          echo "🚀 Deploying to development environment"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
-          
+
+  # Deploy to production (main branch)
   deploy-production:
-    if: github.ref == 'refs/heads/main'
-    needs: build-and-test
     runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
     
     steps:
-      - name: Deploy to Production
-        run: |
-          echo "🚀 Deploying to production environment"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for production
+        run: npm run build:production
+        env:
+          NODE_ENV: production
+          VITE_ENVIRONMENT: production
+
+      - name: Deploy to Netlify (Production)
+        uses: nwtgck/actions-netlify@v3.0
+        with:
+          publish-dir: './dist'
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Production Deploy from GitHub Actions"
+          netlify-config-path: './netlify-production.toml'
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_PRODUCTION_SITE_ID }}
+
+  # Deploy to development (develop branch)
+  deploy-development:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment: development
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for development
+        run: npm run build:development
+        env:
+          NODE_ENV: development
+          VITE_ENVIRONMENT: development
+
+      - name: Deploy to Netlify (Development)
+        uses: nwtgck/actions-netlify@v3.0
+        with:
+          publish-dir: './dist'
+          production-branch: develop
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Development Deploy from GitHub Actions"
+          netlify-config-path: './netlify-development.toml'
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_DEVELOPMENT_SITE_ID }}
+
+  # Preview deployments for PRs
+  deploy-preview:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for preview
+        run: npm run build:development
+        env:
+          NODE_ENV: development
+          VITE_ENVIRONMENT: development
+
+      - name: Deploy Preview to Netlify
+        uses: nwtgck/actions-netlify@v3.0
+        with:
+          publish-dir: './dist'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Preview Deploy from PR #${{ github.event.number }}"
+          alias: pr-${{ github.event.number }}
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_DEVELOPMENT_SITE_ID }}

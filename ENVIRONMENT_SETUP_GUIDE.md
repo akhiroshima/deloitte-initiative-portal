@@ -2,53 +2,56 @@
 
 ## 🎯 Overview
 
-This guide covers setting up separate development and production environments using Git branch strategy with complete data isolation.
+This guide covers setting up separate development and production environments using **Supabase Branches** and **Git branch strategy** with complete data isolation.
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐
-│   Development   │    │   Production    │
-│                 │    │                 │
-│ Branch: develop │    │ Branch: main    │
-│ Site: dev-*     │    │ Site: prod-*    │
-│ DB: dev-*       │    │ DB: prod-*      │
-└─────────────────┘    └─────────────────┘
+┌─────────────────────────────────────────┐
+│         Single Supabase Project         │
+│                                         │
+│  ┌─────────────────┐ ┌─────────────────┐ │
+│  │   Development   │ │   Production    │ │
+│  │                 │ │                 │ │
+│  │ Git: develop    │ │ Git: main       │ │
+│  │ DB: Branch      │ │ DB: Main        │ │
+│  │ Site: dev-*     │ │ Site: prod-*    │ │
+│  └─────────────────┘ └─────────────────┘ │
+└─────────────────────────────────────────┘
 ```
 
 ## 📋 Prerequisites
 
 - Netlify account
-- Supabase account
+- Supabase account (current project)
 - GitHub repository access
 - Required API keys (Groq, Hugging Face, Resend)
 
 ## 🚀 Step-by-Step Setup
 
-### 1. Repository Setup
+### 1. Repository Setup ✅
 
 The repository is already configured with:
 - ✅ `main` branch (production)
 - ✅ `develop` branch (development)
 - ✅ Environment configuration files
 - ✅ Netlify configuration files
+- ✅ GitHub Actions workflows
 
-### 2. Supabase Projects Setup
+### 2. Supabase Branch Setup
 
-#### Create Production Database
+**🎯 Using Your Current Project with Branches (Recommended)**
+
+Instead of creating separate projects, we'll use Supabase's branching feature:
+
+#### Create Development Branch
 1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Create new project: `deloitte-portal-prod`
-3. Copy the project URL and anon key
-4. Run the schema migration:
-   ```sql
-   -- Copy and paste contents of server/schema.sql
-   ```
-
-#### Create Development Database
-1. Create new project: `deloitte-portal-dev`
-2. Copy the project URL and anon key
-3. Run the same schema migration
-4. **Important**: This will have completely separate data
+2. Navigate to your current project: `khukxqhbzekvklfwbfsx`
+3. Click on the branch selector (top navigation bar)
+4. Click "Create branch" 
+5. Name it: `develop`
+6. This creates a completely isolated database instance
+7. Copy the new branch's URL and anon key
 
 ### 3. Netlify Sites Setup
 
