@@ -32,7 +32,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: netlify/actions/cli@master
         with:
-          args: deploy --prod --dir=dist --site=${{ secrets.NETLIFY_PROD_SITE_ID }}
+          args: deploy --prod --dir=dist --site=${{ secrets.NETLIFY_PROD_SITE_ID }} --build=false
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
 
@@ -40,7 +40,7 @@ jobs:
         if: github.ref == 'refs/heads/develop'
         uses: netlify/actions/cli@master
         with:
-          args: deploy --prod --dir=dist --site=${{ secrets.NETLIFY_DEV_SITE_ID }}
+          args: deploy --prod --dir=dist --site=${{ secrets.NETLIFY_DEV_SITE_ID }} --build=false
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
 
@@ -48,6 +48,6 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: netlify/actions/cli@master
         with:
-          args: deploy --dir=dist --site=${{ secrets.NETLIFY_PROD_SITE_ID }}
+          args: deploy --dir=dist --site=${{ secrets.NETLIFY_PROD_SITE_ID }} --build=false
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
