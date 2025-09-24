@@ -1,6 +1,12 @@
 
 import { Initiative, User, HelpWanted, InitiativeStatus, JoinRequest, JoinRequestStatus, Notification, NotificationType, Task, TaskStatus } from '../types';
 import * as db from './database';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client for direct operations
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Current user state
 let currentUserId: string | null = null;
@@ -326,20 +332,29 @@ export const inviteUserToInitiative = async (initiativeId: string, inviteeId: st
 
 export const acceptInvite = async (requestId: string, committedHours: number): Promise<void> => {
     await simulateDelay(400);
-    const requestIndex = memoryJoinRequests.findIndex(r => r.id === requestId);
-    const request = memoryJoinRequests[requestIndex];
-
+    
+    // Get the join request from database
+    const joinRequests = await db.getAllJoinRequests();
+    const request = joinRequests.find(r => r.id === requestId);
+    
     if (!request || request.status !== JoinRequestStatus.Invited) {
         throw new Error("Invitation not found or not valid.");
     }
-    const initiative = memoryInitiatives.find(i => i.id === request.initiativeId);
+    
+    const initiative = await db.getInitiativeById(request.initiativeId);
     if (!initiative) throw new Error("Initiative not found");
 
-    if (!initiative.teamMembers.some(m => m.userId === request.userId)) {
-        initiative.teamMembers.push({ userId: request.userId, committedHours });
-    }
+    // Add user to team members in database
+    await supabase
+      .from('initiative_team_members')
+      .insert({
+        initiative_id: request.initiativeId,
+        user_id: request.userId,
+        committed_hours: committedHours
+      });
     
-    memoryJoinRequests.splice(requestIndex, 1); // Remove the invitation
+    // Remove the invitation from database
+    await db.deleteJoinRequest(requestId);
 
     generateNotification({
         userId: initiative.ownerId,

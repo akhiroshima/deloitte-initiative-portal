@@ -165,7 +165,7 @@ export const getAllInitiatives = async (): Promise<Initiative[]> => {
     
     if (error) throw error;
     
-    // Fetch owner data for each initiative
+    // Fetch owner data and team members for each initiative
     const initiativesWithOwners = await Promise.all(
       data.map(async (initiative) => {
         const { data: ownerData } = await supabase!
@@ -174,12 +174,21 @@ export const getAllInitiatives = async (): Promise<Initiative[]> => {
           .eq('id', initiative.owner_id)
           .single();
         
+        // Fetch team members for this initiative
+        const { data: teamMembersData } = await supabase!
+          .from('initiative_team_members')
+          .select('user_id, committed_hours')
+          .eq('initiative_id', initiative.id);
+        
         return {
           id: initiative.id,
           title: initiative.title,
           description: initiative.description,
           ownerId: initiative.owner_id,
-          teamMembers: initiative.team_members || [],
+          teamMembers: teamMembersData ? teamMembersData.map(member => ({
+            userId: member.user_id,
+            committedHours: member.committed_hours
+          })) : [],
           status: initiative.status,
           startDate: initiative.start_date,
           endDate: initiative.end_date,
@@ -227,10 +236,21 @@ export const getInitiativeById = async (id: string): Promise<Initiative | null> 
       .eq('id', data.owner_id)
       .single();
     
+    // Fetch team members
+    const { data: teamMembersData } = await supabase!
+      .from('initiative_team_members')
+      .select('user_id, committed_hours')
+      .eq('initiative_id', id);
+    
     return {
       id: data.id,
       title: data.title,
       description: data.description,
+      ownerId: data.owner_id,
+      teamMembers: teamMembersData ? teamMembersData.map(member => ({
+        userId: member.user_id,
+        committedHours: member.committed_hours
+      })) : [],
       status: data.status,
       startDate: data.start_date,
       endDate: data.end_date,
@@ -291,6 +311,8 @@ export const createInitiative = async (initiative: Omit<Initiative, 'id'>): Prom
       id: data.id,
       title: data.title,
       description: data.description,
+      ownerId: data.owner_id,
+      teamMembers: [], // New initiatives start with empty team
       status: data.status,
       startDate: data.start_date,
       endDate: data.end_date,
@@ -346,10 +368,43 @@ export const updateInitiative = async (id: string, updates: Partial<Initiative>)
       .eq('id', data.owner_id)
       .single();
     
+    // Handle team members update if provided
+    if (updates.teamMembers) {
+      // Delete existing team members
+      await supabase!
+        .from('initiative_team_members')
+        .delete()
+        .eq('initiative_id', id);
+      
+      // Insert new team members
+      if (updates.teamMembers.length > 0) {
+        const teamMembersToInsert = updates.teamMembers.map(member => ({
+          initiative_id: id,
+          user_id: member.userId,
+          committed_hours: member.committedHours
+        }));
+        
+        await supabase!
+          .from('initiative_team_members')
+          .insert(teamMembersToInsert);
+      }
+    }
+    
+    // Fetch current team members
+    const { data: teamMembersData } = await supabase!
+      .from('initiative_team_members')
+      .select('user_id, committed_hours')
+      .eq('initiative_id', id);
+    
     return {
       id: data.id,
       title: data.title,
       description: data.description,
+      ownerId: data.owner_id,
+      teamMembers: teamMembersData ? teamMembersData.map(member => ({
+        userId: member.user_id,
+        committedHours: member.committed_hours
+      })) : [],
       status: data.status,
       startDate: data.start_date,
       endDate: data.end_date,
@@ -748,6 +803,23 @@ export const updateJoinRequest = async (id: string, status: string): Promise<Joi
   } catch (error) {
     console.error('Error updating join request:', error);
     return null;
+  }
+};
+
+export const deleteJoinRequest = async (id: string): Promise<boolean> => {
+  if (!isDatabaseAvailable()) return false;
+  
+  try {
+    const { error } = await supabase!
+      .from('join_requests')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting join request:', error);
+    return false;
   }
 };
 
