@@ -1,0 +1,27 @@
+# Production Environment Configuration
+# This file contains production-specific environment variables
+
+# Supabase Configuration (Production)
+SUPABASE_URL=your_production_supabase_url_here
+SUPABASE_ANON_KEY=your_production_supabase_anon_key_here
+
+# Frontend environment variables (Vite requires VITE_ prefix)
+VITE_SUPABASE_URL=your_production_supabase_url_here
+VITE_SUPABASE_ANON_KEY=your_production_supabase_anon_key_here
+
+# Authentication
+ALLOWED_EMAIL_DOMAIN=deloitte.com
+AUTH_JWT_SECRET=your_production_jwt_secret_here
+
+# AI Services (Production)
+EMBEDDINGS_API_URL=https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2
+EMBEDDINGS_API_KEY=your_production_huggingface_token_here
+GROQ_API_KEY=your_production_groq_api_key_here
+LLM_PROVIDER=groq
+
+# Email Service (Production)
+RESEND_API_KEY=your_production_resend_api_key_here
+
+# Environment Identifier
+NODE_ENV=production
+VITE_ENVIRONMENT=production

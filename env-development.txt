@@ -1,0 +1,27 @@
+# Development Environment Configuration
+# This file contains development-specific environment variables
+
+# Supabase Configuration (Development)
+SUPABASE_URL=your_development_supabase_url_here
+SUPABASE_ANON_KEY=your_development_supabase_anon_key_here
+
+# Frontend environment variables (Vite requires VITE_ prefix)
+VITE_SUPABASE_URL=your_development_supabase_url_here
+VITE_SUPABASE_ANON_KEY=your_development_supabase_anon_key_here
+
+# Authentication
+ALLOWED_EMAIL_DOMAIN=deloitte.com
+AUTH_JWT_SECRET=your_development_jwt_secret_here
+
+# AI Services (Development)
+EMBEDDINGS_API_URL=https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2
+EMBEDDINGS_API_KEY=your_development_huggingface_token_here
+GROQ_API_KEY=your_development_groq_api_key_here
+LLM_PROVIDER=groq
+
+# Email Service (Development)
+RESEND_API_KEY=your_development_resend_api_key_here
+
+# Environment Identifier
+NODE_ENV=development
+VITE_ENVIRONMENT=development

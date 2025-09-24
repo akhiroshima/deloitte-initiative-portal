@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "setup:env": "./scripts/setup-environments.sh",
+    "build:production": "NODE_ENV=production vite build",
+    "build:development": "NODE_ENV=development vite build"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
