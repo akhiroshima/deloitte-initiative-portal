@@ -178,6 +178,8 @@ export const getAllInitiatives = async (): Promise<Initiative[]> => {
           id: initiative.id,
           title: initiative.title,
           description: initiative.description,
+          ownerId: initiative.owner_id,
+          teamMembers: initiative.team_members || [],
           status: initiative.status,
           startDate: initiative.start_date,
           endDate: initiative.end_date,

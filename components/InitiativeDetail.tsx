@@ -38,7 +38,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
   const { addToast } = useToasts();
 
   const owner = users.find(u => u.id === initiative.ownerId);
-  const teamMembers = initiative.teamMembers
+  const teamMembers = (initiative.teamMembers || [])
     .map(member => ({
         user: users.find(u => u.id === member.userId),
         committedHours: member.committedHours,
@@ -415,7 +415,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                   <Card className="p-6">
                     <h2 className="text-xl font-bold text-foreground mb-4">Skills Needed</h2>
                     <div className="flex flex-wrap gap-2">
-                      {initiative.skillsNeeded.map(skill => <Tag key={skill}>{skill}</Tag>)}
+                      {(initiative.skillsNeeded || []).map(skill => <Tag key={skill}>{skill}</Tag>)}
                     </div>
                   </Card>
                 )}
@@ -424,7 +424,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                   <Card className="p-6">
                     <h2 className="text-xl font-bold text-foreground mb-4">Locations</h2>
                     <div className="flex flex-wrap gap-2">
-                      {initiative.locations.map(loc => <Tag key={loc}>{loc}</Tag>)}
+                      {(initiative.locations || []).map(loc => <Tag key={loc}>{loc}</Tag>)}
                     </div>
                   </Card>
                 )}
@@ -433,7 +433,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                   <Card className="p-6">
                     <h2 className="text-xl font-bold text-foreground mb-4">Tags</h2>
                     <div className="flex flex-wrap gap-2">
-                      {initiative.tags.map(tag => <Tag key={tag}>{tag}</Tag>)}
+                      {(initiative.tags || []).map(tag => <Tag key={tag}>{tag}</Tag>)}
                     </div>
                   </Card>
                 )}
