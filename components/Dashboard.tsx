@@ -92,7 +92,7 @@ const Dashboard: React.FC<DashboardProps> = ({ initiatives, users, tasks, onSele
     users.forEach(user => {
       const assignedHrs = initiatives
         .filter(i => i.status === 'In Progress' || i.status === 'Under Review')
-        .flatMap(i => i.teamMembers)
+        .flatMap(i => i.teamMembers || [])
         .filter(m => m.userId === user.id)
         .reduce((sum, m) => sum + m.committedHours, 0);
       
