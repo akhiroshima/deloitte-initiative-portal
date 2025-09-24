@@ -1,0 +1,23 @@
+# Supabase MCP Server Configuration
+# This file configures the Supabase MCP server for the Deloitte Initiative Portal
+
+# Supabase Configuration
+supabase:
+  project_ref: "khukxqhbzekvklfwbfsx"  # Extract from your Supabase URL
+  db_password: "your_database_password_here"  # Your Supabase database password
+  region: "us-east-1"  # Your Supabase region
+  access_token: "your_access_token_here"  # Optional: for Management API access
+
+# Database Configuration
+database:
+  host: "db.khukxqhbzekvklfwbfsx.supabase.co"
+  port: 5432
+  database: "postgres"
+  user: "postgres"
+  password: "your_database_password_here"
+
+# MCP Server Configuration
+server:
+  host: "127.0.0.1"
+  port: 3001
+  log_level: "INFO"

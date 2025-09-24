@@ -1,0 +1,20 @@
+# Supabase MCP Server Environment Variables
+# This file contains the environment variables specifically for the MCP server
+
+# Supabase Project Configuration
+SUPABASE_PROJECT_REF=khukxqhbzekvklfwbfsx
+SUPABASE_DB_PASSWORD=your_database_password_here
+SUPABASE_REGION=us-east-1
+SUPABASE_ACCESS_TOKEN=your_access_token_here
+
+# Database Connection
+DB_HOST=db.khukxqhbzekvklfwbfsx.supabase.co
+DB_PORT=5432
+DB_NAME=postgres
+DB_USER=postgres
+DB_PASSWORD=your_database_password_here
+
+# MCP Server Configuration
+MCP_HOST=127.0.0.1
+MCP_PORT=3001
+MCP_LOG_LEVEL=INFO

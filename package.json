@@ -11,7 +11,9 @@
     "build-storybook": "storybook build",
     "setup:env": "./scripts/setup-environments.sh",
     "build:production": "NODE_ENV=production vite build",
-    "build:development": "NODE_ENV=development vite build"
+    "build:development": "NODE_ENV=development vite build",
+    "mcp:start": "./scripts/start-mcp-server.sh",
+    "mcp:config": "cp env-mcp.txt .env.mcp && echo 'MCP environment file created. Please update .env.mcp with your credentials.'"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
