@@ -225,7 +225,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                     type="text"
                     value={loginData.username}
                     onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     placeholder="your.username"
                     required
                   />
@@ -244,7 +244,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                     type={showPassword ? 'text' : 'password'}
                     value={loginData.password}
                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    className="w-full pl-10 pr-10 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full pl-10 pr-10 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     placeholder="Enter your password"
                     required
                   />
@@ -279,7 +279,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                       type="text"
                       value={registerData.name}
                       onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
-                      className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       placeholder="John Doe"
                       required
                     />
@@ -319,7 +319,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                     type="text"
                     value={registerData.username}
                     onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     placeholder="your.username"
                     required
                   />
@@ -343,7 +343,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                     type="text"
                     value={registerData.location}
                     onChange={(e) => setRegisterData({ ...registerData, location: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     placeholder="New York, NY"
                     required
                   />

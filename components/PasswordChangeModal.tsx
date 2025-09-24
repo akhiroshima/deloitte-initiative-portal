@@ -135,7 +135,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ isOpen, onClo
                   type={showCurrentPassword ? 'text' : 'password'}
                   value={formData.currentPassword}
                   onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
-                  className="w-full pl-10 pr-10 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full pl-10 pr-10 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="Enter current password"
                   required
                 />
@@ -160,7 +160,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ isOpen, onClo
                   type={showNewPassword ? 'text' : 'password'}
                   value={formData.newPassword}
                   onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-                  className="w-full pl-10 pr-10 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full pl-10 pr-10 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="Enter new password (min 8 characters)"
                   required
                   minLength={8}
@@ -186,7 +186,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ isOpen, onClo
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="w-full pl-10 pr-10 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full pl-10 pr-10 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="Confirm new password"
                   required
                 />

@@ -378,7 +378,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                             <select 
                               value={initiative.status}
                               onChange={handleStatusChange}
-                              className="w-full appearance-none rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm"
+                              className="w-full appearance-none rounded-md border border-input bg-card px-3 py-2 text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm"
                             >
                                 <option value="Searching Talent">Searching Talent</option>
                                 <option value="In Progress">In Progress</option>

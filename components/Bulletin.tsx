@@ -330,10 +330,10 @@ const Bulletin: React.FC<BulletinProps> = ({ initiatives, currentUser, users, on
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder={isSearching ? "Analyzing..." : "e.g., 'An app for new hires to find mentors' or 'Looking to join a project using React'"}
-              className={`w-full flex-grow rounded-md border-input bg-background shadow-sm focus:border-primary focus:ring-primary text-base placeholder:text-muted-foreground resize-none px-4 py-2.5 transition-all ${
+              className={`w-full flex-grow rounded-md border-input bg-card shadow-sm focus:border-primary focus:ring-primary text-base placeholder:text-muted-foreground resize-none px-4 py-2.5 transition-all ${
                 isSearching 
                 ? 'bg-muted cursor-wait' 
-                : 'bg-background'
+                : 'bg-card'
               }`}
               rows={1}
               onKeyDown={(e) => {

@@ -243,7 +243,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
                                     onChange={(e) => setNewSkill(e.target.value)}
                                     onKeyDown={handleAddSkill}
                                     placeholder="Add skill..."
-                                    className="flex-grow bg-transparent p-1 text-sm outline-none w-full placeholder:text-muted-foreground mt-2 border-b border-input focus:border-primary"
+                                    className="flex-grow bg-card p-1 text-sm outline-none w-full placeholder:text-muted-foreground mt-2 border-b border-input focus:border-primary"
                                 />
                                 </>
                             ) : (
