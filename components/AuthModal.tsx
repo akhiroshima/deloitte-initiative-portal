@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { Input } from './ui/input';
 import { typography } from '../tokens/typography';
 import { Eye, EyeOff, Mail, Lock, User, MapPin, Briefcase, XCircle, X } from 'lucide-react';
 
@@ -155,26 +156,22 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
         <div className="space-y-6">
           {/* Mode Toggle */}
           <div className="flex rounded-lg bg-muted p-1">
-            <button
+            <Button
               onClick={() => switchMode('login')}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                mode === 'login'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+              variant={mode === 'login' ? 'secondary' : 'ghost'}
+              className="flex-1"
+              size="sm"
             >
               Login
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => switchMode('register')}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                mode === 'register'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+              variant={mode === 'register' ? 'secondary' : 'ghost'}
+              className="flex-1"
+              size="sm"
             >
               Register
-            </button>
+            </Button>
           </div>
 
           {/* Error Message */}
@@ -219,13 +216,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                   Username
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <input
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
+                  <Input
                     id="login-username"
                     type="text"
                     value={loginData.username}
                     onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="pl-10 pr-3"
                     placeholder="your.username"
                     required
                   />
@@ -239,12 +236,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <input
+                  <Input
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     value={loginData.password}
                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    className="w-full pl-10 pr-10 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="pl-10 pr-10"
                     placeholder="Enter your password"
                     required
                   />
@@ -274,12 +271,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <input
+                    <Input
                       id="register-name"
                       type="text"
                       value={registerData.name}
                       onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
-                      className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="pl-10 pr-3"
                       placeholder="John Doe"
                       required
                     />

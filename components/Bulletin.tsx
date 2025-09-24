@@ -10,6 +10,7 @@ import { Sparkles, Plus } from 'lucide-react';
 import FilterDropdown from './ui/FilterDropdown';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { Textarea } from './ui/textarea';
 import { typography } from '../tokens/typography';
 import { useToasts } from './ui/ToastProvider';
 import CreateInitiativeFromSearchCard from './CreateInitiativeFromSearchCard';
@@ -325,15 +326,15 @@ const Bulletin: React.FC<BulletinProps> = ({ initiatives, currentUser, users, on
           </div>
         </div>
         <form onSubmit={handleSearch} className="mt-4 flex flex-col sm:flex-row sm:items-stretch gap-3">
-            <textarea
+            <Textarea
               disabled={isSearching}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder={isSearching ? "Analyzing..." : "e.g., 'An app for new hires to find mentors' or 'Looking to join a project using React'"}
-              className={`w-full flex-grow rounded-md border-input bg-card shadow-sm focus:border-primary focus:ring-primary text-base placeholder:text-muted-foreground resize-none px-4 py-2.5 transition-all ${
+              className={`w-full flex-grow resize-none ${
                 isSearching 
                 ? 'bg-muted cursor-wait' 
-                : 'bg-card'
+                : ''
               }`}
               rows={1}
               onKeyDown={(e) => {

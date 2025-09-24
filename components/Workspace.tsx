@@ -3,6 +3,7 @@ import { Initiative, User, JoinRequest, JoinRequestStatus, Task } from '../types
 import * as api from '../services/api';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
+import { Input } from './ui/input';
 import Tag from './ui/Tag';
 import { Pencil, X, Users, ClipboardList, CheckCircle, XCircle, FolderOpen, Key } from 'lucide-react';
 import AcceptInviteModal from './AcceptInviteModal';
@@ -237,13 +238,13 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
                                         </button>
                                     </span>
                                 ))}
-                                <input
+                                <Input
                                     type="text"
                                     value={newSkill}
                                     onChange={(e) => setNewSkill(e.target.value)}
                                     onKeyDown={handleAddSkill}
                                     placeholder="Add skill..."
-                                    className="flex-grow bg-card p-1 text-sm outline-none w-full placeholder:text-muted-foreground mt-2 border-b border-input focus:border-primary"
+                                    className="flex-grow text-sm mt-2 border-0 border-b border-input focus:border-primary rounded-none"
                                 />
                                 </>
                             ) : (

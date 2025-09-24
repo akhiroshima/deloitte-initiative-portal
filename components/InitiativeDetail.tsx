@@ -5,6 +5,7 @@ import { ArrowLeft, ClipboardList, Plus, ChevronDown, MessageCircle, CheckCircle
 import { Card } from './ui/Card';
 import Tag from './ui/Tag';
 import { Button } from './ui/Button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { typography } from '../tokens/typography';
 import CreateHelpWantedModal from './CreateHelpWantedModal';
 import TasksBoard from './tasks/TasksBoard';
@@ -374,19 +375,17 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                     <li className="flex items-center gap-4">
                       <span className="font-semibold text-muted-foreground w-24 flex-shrink-0">Status</span>
                        {isOwner && initiative.status !== 'Completed' ? (
-                          <div className="relative w-full">
-                            <select 
-                              value={initiative.status}
-                              onChange={handleStatusChange}
-                              className="w-full appearance-none rounded-md border border-input bg-card px-3 py-2 text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm"
-                            >
-                                <option value="Searching Talent">Searching Talent</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Under Review">Under Review</option>
-                                <option value="Completed">Completed</option>
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
-                          </div>
+                          <Select value={initiative.status} onValueChange={(value) => handleStatusChange({ target: { value } })}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Searching Talent">Searching Talent</SelectItem>
+                              <SelectItem value="In Progress">In Progress</SelectItem>
+                              <SelectItem value="Under Review">Under Review</SelectItem>
+                              <SelectItem value="Completed">Completed</SelectItem>
+                            </SelectContent>
+                          </Select>
                         ) : (
                           <span className="rounded-md bg-muted px-2 py-0.5 font-medium text-muted-foreground">{initiative.status}</span>
                         )}
