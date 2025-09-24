@@ -119,6 +119,15 @@ create table if not exists notifications (
   created_at timestamp with time zone default now()
 );
 
--- Add foreign key constraint for initiatives owner_id
-alter table initiatives add constraint initiatives_owner_id_fkey 
-  foreign key (owner_id) references users(id) on delete cascade;
+-- Add foreign key constraint for initiatives owner_id (if not exists)
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.table_constraints 
+    where constraint_name = 'initiatives_owner_id_fkey' 
+    and table_name = 'initiatives'
+  ) then
+    alter table initiatives add constraint initiatives_owner_id_fkey 
+      foreign key (owner_id) references users(id) on delete cascade;
+  end if;
+end $$;
