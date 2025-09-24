@@ -1,5 +1,8 @@
 .env.local
 .env
+.env.mcp
+.env.production
+.env.development
 *.log
 .DS_Store
 Thumbs.db

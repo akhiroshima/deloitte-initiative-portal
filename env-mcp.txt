@@ -1,20 +1,16 @@
-# Supabase MCP Server Environment Variables
-# This file contains the environment variables specifically for the MCP server
+# Supabase MCP Server Configuration
+# This file contains the credentials needed for the Supabase MCP server
 
-# Supabase Project Configuration
-SUPABASE_PROJECT_REF=khukxqhbzekvklfwbfsx
-SUPABASE_DB_PASSWORD=your_database_password_here
-SUPABASE_REGION=us-east-1
+# Supabase Project Reference
+# Get this from your Supabase project settings
+SUPABASE_PROJECT_REF=your_project_ref_here
+
+# Supabase Access Token
+# Generate this from your Supabase dashboard under Account Settings > Access Tokens
 SUPABASE_ACCESS_TOKEN=your_access_token_here
 
-# Database Connection
-DB_HOST=db.khukxqhbzekvklfwbfsx.supabase.co
-DB_PORT=5432
-DB_NAME=postgres
-DB_USER=postgres
-DB_PASSWORD=your_database_password_here
-
-# MCP Server Configuration
-MCP_HOST=127.0.0.1
-MCP_PORT=3001
-MCP_LOG_LEVEL=INFO
+# Instructions:
+# 1. Copy this file to .env.mcp
+# 2. Replace the placeholder values with your actual credentials
+# 3. Update .cursor/mcp.json with your project-ref
+# 4. Restart Cursor to load the MCP server
