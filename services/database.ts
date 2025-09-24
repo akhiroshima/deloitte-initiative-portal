@@ -285,6 +285,21 @@ export const createInitiative = async (initiative: Omit<Initiative, 'id'>): Prom
     
     if (error) throw error;
     
+    // Automatically add owner as team member with default committed hours
+    const defaultCommittedHours = 10; // Default hours per week for owner
+    const { error: teamMemberError } = await supabase!
+      .from('initiative_team_members')
+      .insert({
+        initiative_id: data.id,
+        user_id: data.owner_id,
+        committed_hours: defaultCommittedHours
+      });
+    
+    if (teamMemberError) {
+      console.error('Error adding owner as team member:', teamMemberError);
+      // Continue execution - don't fail initiative creation if team member addition fails
+    }
+    
     // Fetch owner data
     const { data: ownerData } = await supabase!
       .from('users')
@@ -297,7 +312,10 @@ export const createInitiative = async (initiative: Omit<Initiative, 'id'>): Prom
       title: data.title,
       description: data.description,
       ownerId: data.owner_id,
-      teamMembers: [], // New initiatives start with empty team
+      teamMembers: [{
+        userId: data.owner_id,
+        committedHours: defaultCommittedHours
+      }], // Owner is automatically a team member
       status: data.status,
       startDate: data.start_date,
       endDate: data.end_date,
