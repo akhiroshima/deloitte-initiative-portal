@@ -88,30 +88,31 @@ const registerHandler: Handler = async (event) => {
     }
 
     // Send password via email
+    let emailSent = false;
     try {
       await sendEmail({
         to: emailLower,
         subject: 'Welcome to Deloitte Initiative Portal - Your Login Credentials',
         html: createPasswordEmail(username, generatedPassword)
       });
+      emailSent = true;
+      console.log('Email sent successfully to:', emailLower);
     } catch (emailError) {
       console.error('Email send error:', emailError);
       // Don't fail registration if email fails, but log it
     }
 
-    // Create session
-    const token = await signSession(emailLower, allowedDomain, 60 * 60 * 24) // 24h
-    const isSecure = (event.headers['x-forwarded-proto'] || '').includes('https')
-    const cookie = buildSessionCookie(token, isSecure)
-
+    // Return success without creating session - user must login with received password
     return {
       statusCode: 201,
       headers: {
-        'Set-Cookie': cookie,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ 
-        ok: true, 
+        ok: true,
+        message: emailSent 
+          ? 'Registration successful! Please check your email for login credentials and log in manually.'
+          : 'Registration successful! However, there was an issue sending your password via email. Please contact support.',
         user: { 
           id: newUser.id,
           email: emailLower,

@@ -3,8 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { typography } from '../tokens/typography';
-import { Eye, EyeOff, Mail, Lock, User, MapPin, Briefcase, XCircle, X } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, MapPin, Briefcase, XCircle, X, Clock } from 'lucide-react';
+import { AVAILABLE_LOCATIONS } from '../constants';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -98,8 +100,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
       const data = await response.json();
 
       if (response.ok) {
-        onAuthSuccess(data.user);
-        onClose();
+        // Show success message and switch to login mode
+        setError(null);
+        setMode('login');
+        // Pre-fill username for login
+        setLoginData({ ...loginData, username: registerData.username });
+        // Show success message
+        alert(data.message || 'Registration successful! Please check your email for login credentials.');
       } else {
         // More specific error messages for registration
         if (response.status === 409) {
@@ -331,20 +338,69 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
 
               <div className="space-y-2">
                 <label htmlFor="register-location" className="text-sm font-medium text-foreground">
-                  Location
+                  Studio Location
+                </label>
+                <Select value={registerData.location} onValueChange={(value) => setRegisterData({ ...registerData, location: value })}>
+                  <SelectTrigger className="w-full">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="Select your studio location" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AVAILABLE_LOCATIONS.map((location) => (
+                      <SelectItem key={location} value={location}>
+                        {location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="register-skills" className="text-sm font-medium text-foreground">
+                  Skills
                 </label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <input
-                    id="register-location"
+                  <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="register-skills"
                     type="text"
-                    value={registerData.location}
-                    onChange={(e) => setRegisterData({ ...registerData, location: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="New York, NY"
+                    value={registerData.skills.join(', ')}
+                    onChange={(e) => setRegisterData({ 
+                      ...registerData, 
+                      skills: e.target.value.split(',').map(skill => skill.trim()).filter(skill => skill.length > 0)
+                    })}
+                    className="pl-10"
+                    placeholder="e.g. React, TypeScript, UI/UX Design"
                     required
                   />
                 </div>
+                <p className="text-xs text-muted-foreground">Enter your key skills separated by commas</p>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="register-capacity" className="text-sm font-medium text-foreground">
+                  Weekly Capacity (Hours)
+                </label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="register-capacity"
+                    type="number"
+                    min="1"
+                    max="40"
+                    value={registerData.weeklyCapacityHrs}
+                    onChange={(e) => setRegisterData({ 
+                      ...registerData, 
+                      weeklyCapacityHrs: parseInt(e.target.value) || 1
+                    })}
+                    className="pl-10"
+                    placeholder="40"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">How many hours per week can you dedicate to initiatives?</p>
               </div>
 
               <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">

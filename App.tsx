@@ -59,7 +59,7 @@ const App: React.FC = () => {
   }, [theme]);
 
   // Check authentication status
-  const checkAuth = useCallback(async () => {
+  const checkAuth = useCallback(async (): Promise<User | null> => {
     try {
       setAuthLoading(true);
       console.log("Checking authentication...");
@@ -71,7 +71,7 @@ const App: React.FC = () => {
         setIsAuthenticated(false);
         setCurrentUser(null);
         api.setCurrentUserId(null);
-        return false;
+        return null;
       }
       
       const data = await response.json();
@@ -83,37 +83,42 @@ const App: React.FC = () => {
         setCurrentUser(data.user);
         // Sync with API layer
         api.setCurrentUserId(data.user.id);
-        return true;
+        return data.user;
       } else {
         console.log("User not authenticated");
         setIsAuthenticated(false);
         setCurrentUser(null);
         api.setCurrentUserId(null);
-        return false;
+        return null;
       }
     } catch (error) {
       console.error("Auth check failed:", error);
       setIsAuthenticated(false);
       setCurrentUser(null);
       api.setCurrentUserId(null);
-      return false;
+      return null;
     } finally {
       setAuthLoading(false);
     }
   }, []);
 
-  const handleDataChange = useCallback(async () => {
-    if (!isAuthenticated || !currentUser?.id) return;
+  const handleDataChange = useCallback(async (user?: User) => {
+    const userToUse = user || currentUser;
+    if (!userToUse?.id) {
+      console.log("No user available for data loading");
+      return;
+    }
     
     try {
       setNetworkError(false);
+      console.log("Loading data for user:", userToUse.id);
       const [initiativesData, helpWantedData, usersData, joinRequestsData, tasksData, notificationsData] = await Promise.all([
         api.getInitiatives(),
         api.getHelpWantedPosts(),
         api.getUsers(),
         api.getAllJoinRequests(),
         api.getAllTasks(),
-        api.getNotificationsForUser(currentUser.id)
+        api.getNotificationsForUser(userToUse.id)
       ]);
       setInitiatives(initiativesData);
       setHelpWanted(helpWantedData);
@@ -121,6 +126,10 @@ const App: React.FC = () => {
       setJoinRequests(joinRequestsData);
       setTasks(tasksData);
       setNotifications(notificationsData.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      console.log("Data loaded successfully:", { 
+        initiatives: initiativesData.length, 
+        users: usersData.length 
+      });
 
     } catch (error) {
       console.error("Failed to fetch app data:", error);
@@ -128,22 +137,22 @@ const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, currentUser]);
+  }, [currentUser]);
 
   useEffect(() => {
     const initializeApp = async () => {
       setLoading(true);
-      const authResult = await checkAuth();
-      if (authResult) {
-        await handleDataChange();
+      const authenticatedUser = await checkAuth();
+      if (authenticatedUser) {
+        await handleDataChange(authenticatedUser);
       } else {
         setShowAuthModal(true);
+        setLoading(false);
       }
-      setLoading(false);
     };
     
     initializeApp();
-  }, [checkAuth]);
+  }, [checkAuth, handleDataChange]);
 
   // Authentication handlers
   const handleAuthSuccess = async (user: User) => {
@@ -152,7 +161,7 @@ const App: React.FC = () => {
     // Sync with API layer
     api.setCurrentUserId(user.id);
     setShowAuthModal(false);
-    await handleDataChange();
+    await handleDataChange(user);
   };
 
   const handleLogout = async () => {

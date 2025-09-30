@@ -1,6 +1,17 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+
+function getResendClient(): Resend {
+  if (!resend) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY environment variable is not set');
+    }
+    resend = new Resend(apiKey);
+  }
+  return resend;
+}
 
 export interface EmailOptions {
   to: string;
@@ -10,8 +21,9 @@ export interface EmailOptions {
 
 export const sendEmail = async (options: EmailOptions) => {
   try {
-    const { data, error } = await resend.emails.send({
-      from: 'Deloitte Initiative Portal <noreply@deloitte-initiative-portal.netlify.app>',
+    const resendClient = getResendClient();
+    const { data, error } = await resendClient.emails.send({
+      from: 'Acme <onboarding@resend.dev>',
       to: options.to,
       subject: options.subject,
       html: options.html,
@@ -19,7 +31,8 @@ export const sendEmail = async (options: EmailOptions) => {
 
     if (error) {
       console.error('Email send error:', error);
-      throw new Error('Failed to send email');
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      throw new Error(`Failed to send email: ${error.message || 'Unknown error'}`);
     }
 
     return data;
