@@ -12,6 +12,7 @@ import AuthModal from './components/AuthModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import { OnboardingBanner } from './components/OnboardingBanner';
 import { NetworkError } from './components/NetworkError';
+import FeedbackButton from './components/FeedbackButton';
 import * as api from './services/api';
 import { Initiative, User, HelpWanted, JoinRequest, Notification, Task } from './types';
 import LoadingSkeleton from './components/ui/LoadingSkeleton';
@@ -509,6 +510,9 @@ const App: React.FC = () => {
               </div>
             </main>
         </div>
+        
+        {/* Feedback Button - Only visible in development */}
+        <FeedbackButton />
       </div>
     </ErrorBoundary>
   );
