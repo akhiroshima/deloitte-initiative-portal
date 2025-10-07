@@ -15,6 +15,15 @@ const bodySchema = z.object({
   weeklyCapacityHrs: z.number().min(1).max(40)
 })
 
+// Simple password hashing (in production, use bcrypt or similar)
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(password)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
 const registerHandler: Handler = async (event) => {
   try {
     if (event.httpMethod !== 'POST') {
@@ -133,12 +142,3 @@ const registerHandler: Handler = async (event) => {
 }
 
 export const handler = withSecurity(registerHandler);
-
-// Simple password hashing (in production, use bcrypt or similar)
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(password)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-}
