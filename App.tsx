@@ -137,7 +137,7 @@ const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUser]);
+  }, []); // Removed currentUser dependency to prevent recreation
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -152,7 +152,7 @@ const App: React.FC = () => {
     };
     
     initializeApp();
-  }, [checkAuth, handleDataChange]);
+  }, [checkAuth]); // Removed handleDataChange from dependencies to prevent infinite loop
 
   // Authentication handlers
   const handleAuthSuccess = async (user: User) => {
