@@ -123,12 +123,13 @@ const registerHandler: Handler = async (event) => {
       return { 
         statusCode: 500, 
         body: JSON.stringify({ 
-          error: 'Failed to create user',
+          error: 'Failed to create user - VERSION 2.0',
           details: error.message || 'Unknown error',
           code: error.code || 'NO_CODE',
           hint: error.hint || 'NO_HINT',
           errorType: typeof error,
-          errorKeys: Object.keys(error || {})
+          errorKeys: Object.keys(error || {}),
+          timestamp: new Date().toISOString()
         }) 
       }
     }
