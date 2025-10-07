@@ -93,7 +93,15 @@ const registerHandler: Handler = async (event) => {
 
     if (error) {
       console.error('Database error:', error)
-      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to create user' }) }
+      return { 
+        statusCode: 500, 
+        body: JSON.stringify({ 
+          error: 'Failed to create user',
+          details: error.message,
+          code: error.code,
+          hint: error.hint
+        }) 
+      }
     }
 
     // Send password via email
