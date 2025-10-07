@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Bulletin from './components/Bulletin';
@@ -50,6 +50,7 @@ const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [networkError, setNetworkError] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -102,14 +103,24 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleDataChange = useCallback(async (user?: User) => {
+  // Stable reference for handleDataChange to prevent re-renders
+  const handleDataChangeRef = useRef<(user?: User) => Promise<void>>();
+  
+  handleDataChangeRef.current = async (user?: User) => {
     const userToUse = user || currentUser;
     if (!userToUse?.id) {
       console.log("No user available for data loading");
       return;
     }
     
+    // Prevent multiple simultaneous data loading calls
+    if (isLoadingData) {
+      console.log("Data loading already in progress, skipping...");
+      return;
+    }
+    
     try {
+      setIsLoadingData(true);
       setNetworkError(false);
       console.log("Loading data for user:", userToUse.id);
       const [initiativesData, helpWantedData, usersData, joinRequestsData, tasksData, notificationsData] = await Promise.all([
@@ -136,8 +147,13 @@ const App: React.FC = () => {
       setNetworkError(true);
     } finally {
       setLoading(false);
+      setIsLoadingData(false);
     }
-  }, []); // Removed currentUser dependency to prevent recreation
+  };
+
+  const handleDataChange = useCallback((user?: User) => {
+    return handleDataChangeRef.current?.(user);
+  }, []);
 
   useEffect(() => {
     const initializeApp = async () => {
