@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { typography } from '../tokens/typography';
 import { Eye, EyeOff, Mail, Lock, User, MapPin, Briefcase, XCircle, X, Clock } from 'lucide-react';
-import { AVAILABLE_LOCATIONS } from '../constants';
+import { AVAILABLE_LOCATIONS, IS_DEV_MODE } from '../constants';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -36,6 +36,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
     location: '',
     skills: [] as string[],
     weeklyCapacityHrs: 40
+  });
+
+  // Dev registration form state (simplified)
+  const [devRegisterData, setDevRegisterData] = useState({
+    email: '',
+    password: ''
   });
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -127,6 +133,49 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
     }
   };
 
+  const handleDevRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/.netlify/functions/auth-register-dev', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(devRegisterData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Show success message and switch to login mode
+        setError(null);
+        setMode('login');
+        // Pre-fill username for login (extract from email)
+        const username = devRegisterData.email.split('@')[0];
+        setLoginData({ ...loginData, username: username });
+        // Show success message
+        alert(data.message || 'Dev registration successful! You can now login with your email and password.');
+      } else {
+        // More specific error messages for dev registration
+        if (response.status === 409) {
+          setError('Email already exists. Please use a different email.');
+        } else if (response.status === 400) {
+          setError('Invalid input. Please check your email and password.');
+        } else if (response.status === 500) {
+          setError('Server error. Please try again later.');
+        } else {
+          setError(data.error || 'Registration failed. Please try again.');
+        }
+      }
+    } catch (err) {
+      console.error('Dev registration error:', err);
+      setError('Network error. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setLoginData({ username: '', password: '' });
     setRegisterData({
@@ -136,6 +185,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
       location: '',
       skills: [],
       weeklyCapacityHrs: 40
+    });
+    setDevRegisterData({
+      email: '',
+      password: ''
     });
     setError(null);
   };
@@ -268,8 +321,75 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
             </form>
           )}
 
+          {/* Dev Register Form */}
+          {mode === 'register' && IS_DEV_MODE && (
+            <form onSubmit={handleDevRegister} className="space-y-4">
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5">⚠️</div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-yellow-900 dark:text-yellow-100">Development Mode</h4>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                      Simplified registration for testing. Just enter your email and password.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="dev-email" className="text-sm font-medium text-foreground">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="dev-email"
+                    type="email"
+                    value={devRegisterData.email}
+                    onChange={(e) => setDevRegisterData({ ...devRegisterData, email: e.target.value })}
+                    className="pl-10 pr-3"
+                    placeholder="your.email@example.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="dev-password" className="text-sm font-medium text-foreground">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="dev-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={devRegisterData.password}
+                    onChange={(e) => setDevRegisterData({ ...devRegisterData, password: e.target.value })}
+                    className="pl-10 pr-10"
+                    placeholder="Enter your password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff /> : <Eye />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Creating Account...' : 'Create Dev Account'}
+              </Button>
+            </form>
+          )}
+
           {/* Register Form */}
-          {mode === 'register' && (
+          {mode === 'register' && !IS_DEV_MODE && (
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
