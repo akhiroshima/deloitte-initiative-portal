@@ -70,9 +70,21 @@ const registerHandler: Handler = async (event) => {
 
     // Generate random password
     const generatedPassword = generatePassword()
+    console.log('Generated password length:', generatedPassword.length)
     const hashedPassword = await hashPassword(generatedPassword)
+    console.log('Hashed password length:', hashedPassword.length)
 
     // Create user in database
+    console.log('Attempting to create user with data:', {
+      email: emailLower,
+      username: username.toLowerCase().trim(),
+      name,
+      role,
+      location,
+      skills,
+      weeklyCapacityHrs
+    })
+    
     const { data: newUser, error } = await supabase
       .from('users')
       .insert({
