@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { authRateLimit, createRateLimitResponse } from './_lib/rateLimit'
 import { withSecurity } from './_lib/security'
 import { sendEmail, generatePassword, createPasswordEmail } from './_lib/email'
+import { createHash } from 'crypto'
 
 const bodySchema = z.object({ 
   username: z.string().min(2).max(50), 
@@ -15,13 +16,9 @@ const bodySchema = z.object({
   weeklyCapacityHrs: z.number().min(1).max(40)
 })
 
-// Simple password hashing (in production, use bcrypt or similar)
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(password)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+// Simple password hashing using Node.js crypto module
+function hashPassword(password: string): string {
+  return createHash('sha256').update(password).digest('hex')
 }
 
 const registerHandler: Handler = async (event) => {
@@ -72,21 +69,8 @@ const registerHandler: Handler = async (event) => {
     const generatedPassword = generatePassword()
     console.log('Generated password length:', generatedPassword.length)
     
-    let hashedPassword;
-    try {
-      hashedPassword = await hashPassword(generatedPassword)
-      console.log('Hashed password length:', hashedPassword.length)
-    } catch (hashError) {
-      console.error('Password hashing failed:', hashError)
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          error: 'Password hashing failed',
-          details: hashError.message,
-          stack: hashError.stack
-        })
-      }
-    }
+    const hashedPassword = hashPassword(generatedPassword)
+    console.log('Hashed password length:', hashedPassword.length)
 
     // Create user in database
     console.log('Attempting to create user with data:', {
