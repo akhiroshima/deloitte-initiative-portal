@@ -51,6 +51,7 @@ const App: React.FC = () => {
   const [networkError, setNetworkError] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -105,8 +106,11 @@ const App: React.FC = () => {
 
   // Stable reference for handleDataChange to prevent re-renders
   const handleDataChangeRef = useRef<(user?: User) => Promise<void>>();
+  const isMountedRef = useRef(true);
   
   handleDataChangeRef.current = async (user?: User) => {
+    if (!isMountedRef.current) return; // Don't update state if component is unmounted
+    
     const userToUse = user || currentUser;
     if (!userToUse?.id) {
       console.log("No user available for data loading");
@@ -131,6 +135,10 @@ const App: React.FC = () => {
         api.getAllTasks(),
         api.getNotificationsForUser(userToUse.id)
       ]);
+      
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) return;
+      
       setInitiatives(initiativesData);
       setHelpWanted(helpWantedData);
       setUsers(usersData);
@@ -144,10 +152,14 @@ const App: React.FC = () => {
 
     } catch (error) {
       console.error("Failed to fetch app data:", error);
-      setNetworkError(true);
+      if (isMountedRef.current) {
+        setNetworkError(true);
+      }
     } finally {
-      setLoading(false);
-      setIsLoadingData(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+        setIsLoadingData(false);
+      }
     }
   };
 
@@ -156,6 +168,8 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (isInitialized) return; // Prevent multiple initializations
+    
     const initializeApp = async () => {
       setLoading(true);
       const authenticatedUser = await checkAuth();
@@ -165,10 +179,18 @@ const App: React.FC = () => {
         setShowAuthModal(true);
         setLoading(false);
       }
+      setIsInitialized(true);
     };
     
     initializeApp();
-  }, [checkAuth]); // Removed handleDataChange from dependencies to prevent infinite loop
+  }, []); // Empty dependency array - run only once on mount
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Authentication handlers
   const handleAuthSuccess = async (user: User) => {
