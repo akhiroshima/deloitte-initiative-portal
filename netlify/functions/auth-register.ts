@@ -71,8 +71,22 @@ const registerHandler: Handler = async (event) => {
     // Generate random password
     const generatedPassword = generatePassword()
     console.log('Generated password length:', generatedPassword.length)
-    const hashedPassword = await hashPassword(generatedPassword)
-    console.log('Hashed password length:', hashedPassword.length)
+    
+    let hashedPassword;
+    try {
+      hashedPassword = await hashPassword(generatedPassword)
+      console.log('Hashed password length:', hashedPassword.length)
+    } catch (hashError) {
+      console.error('Password hashing failed:', hashError)
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'Password hashing failed',
+          details: hashError.message,
+          stack: hashError.stack
+        })
+      }
+    }
 
     // Create user in database
     console.log('Attempting to create user with data:', {
