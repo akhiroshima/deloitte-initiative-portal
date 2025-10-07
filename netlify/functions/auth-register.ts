@@ -172,8 +172,17 @@ const registerHandler: Handler = async (event) => {
       })
     }
   } catch (e: any) {
-    console.error(e)
-    return { statusCode: 500, body: JSON.stringify({ error: e.message || 'Server error' }) }
+    console.error('Outer catch block error:', e)
+    console.error('Error stack:', e.stack)
+    return { 
+      statusCode: 500, 
+      body: JSON.stringify({ 
+        error: 'Server error',
+        details: e.message,
+        stack: e.stack,
+        type: e.constructor.name
+      }) 
+    }
   }
 }
 
