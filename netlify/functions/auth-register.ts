@@ -105,13 +105,15 @@ const registerHandler: Handler = async (event) => {
 
     if (error) {
       console.error('Database error:', error)
+      console.error('Full error object:', JSON.stringify(error, null, 2))
       return { 
         statusCode: 500, 
         body: JSON.stringify({ 
           error: 'Failed to create user',
           details: error.message,
           code: error.code,
-          hint: error.hint
+          hint: error.hint,
+          fullError: error
         }) 
       }
     }
