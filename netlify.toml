@@ -1,6 +1,5 @@
 [build]
   publish = "dist"
-  command = "echo 'Build already completed by GitHub Actions'"
 
 [functions]
   directory = "netlify/functions"
