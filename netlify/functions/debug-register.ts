@@ -3,6 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 
 const debugHandler: Handler = async (event) => {
   try {
+    if (event.httpMethod !== 'GET') {
+      return { statusCode: 405, body: 'Method Not Allowed' }
+    }
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_ANON_KEY
     
