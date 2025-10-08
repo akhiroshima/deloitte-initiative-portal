@@ -66,7 +66,9 @@ const App: React.FC = () => {
     try {
       setAuthLoading(true);
       console.log("Checking authentication...");
-      const response = await fetch('/.netlify/functions/auth-me');
+      const response = await fetch('/.netlify/functions/auth-me', {
+        credentials: 'include'
+      });
       
       // Handle non-200 responses
       if (!response.ok) {
@@ -205,7 +207,10 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch('/.netlify/functions/auth-logout', { method: 'POST' });
+      await fetch('/.netlify/functions/auth-logout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
     } catch (error) {
       console.error('Logout failed:', error);
     }

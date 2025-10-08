@@ -53,6 +53,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
       const response = await fetch('/.netlify/functions/auth-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           username: loginData.username,
           password: loginData.password
@@ -93,6 +94,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
       const response = await fetch('/.netlify/functions/auth-register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           username: registerData.username,
           name: registerData.name,
@@ -142,6 +144,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
       const response = await fetch('/.netlify/functions/auth-register-dev', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(devRegisterData)
       });
 

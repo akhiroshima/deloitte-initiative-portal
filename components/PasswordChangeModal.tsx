@@ -46,6 +46,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ isOpen, onClo
       const response = await fetch('/.netlify/functions/auth-change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           currentPassword: formData.currentPassword,
           newPassword: formData.newPassword
