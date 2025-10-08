@@ -9,12 +9,12 @@ interface FeedbackButtonProps {
 const FeedbackButton: React.FC<FeedbackButtonProps> = ({ className = '' }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Only show in development environment
+  // Show feedback button in development environments
   const isDevelopment = process.env.NODE_ENV === 'development' || 
                         window.location.hostname.includes('localhost') ||
                         window.location.hostname.includes('127.0.0.1') ||
                         window.location.port === '5173' ||
-                        window.location.hostname === 'localhost'; // Vite default dev port
+                        window.location.hostname.includes('deloitte-portal-dev.netlify.app'); // Development server
 
   // Debug logging
   console.log('FeedbackButton Debug:', {
@@ -25,8 +25,7 @@ const FeedbackButton: React.FC<FeedbackButtonProps> = ({ className = '' }) => {
     fullUrl: window.location.href
   });
 
-  // For now, always show in development - we'll refine this later
-  const shouldShow = true; // Temporarily always show for debugging
+  const shouldShow = isDevelopment;
 
   if (!shouldShow) {
     return null;
