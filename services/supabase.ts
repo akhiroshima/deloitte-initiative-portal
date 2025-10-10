@@ -8,7 +8,16 @@ if (!supabaseUrl || !supabaseKey) {
   console.warn('Supabase credentials not found. Some features may not work.');
 }
 
-export const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Create Supabase client with auth persistence
+export const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storage: window.localStorage, // Use localStorage for session persistence
+    storageKey: 'supabase.auth.token', // Custom storage key
+  },
+}) : null;
 
 // Helper function to check if database is available
 export const isDatabaseAvailable = () => {

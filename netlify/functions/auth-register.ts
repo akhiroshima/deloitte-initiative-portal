@@ -1,11 +1,8 @@
 import type { Handler } from '@netlify/functions'
 import { z } from 'zod'
-import { signSession, buildSessionCookie } from './_lib/auth'
 import { createClient } from '@supabase/supabase-js'
 import { authRateLimit, createRateLimitResponse } from './_lib/rateLimit'
 import { withSecurity } from './_lib/security'
-import { sendEmail, generatePassword, createPasswordEmail } from './_lib/email'
-import { createHash } from 'crypto'
 
 const bodySchema = z.object({ 
   username: z.string().min(2).max(50), 
@@ -13,13 +10,9 @@ const bodySchema = z.object({
   role: z.enum(['Designer', 'Developer', 'Lead', 'Manager']),
   location: z.string().min(2),
   skills: z.array(z.string()).min(1),
-  weeklyCapacityHrs: z.number().min(1).max(40)
+  weeklyCapacityHrs: z.number().min(1).max(40),
+  password: z.string().min(8).optional() // Optional password, will be generated if not provided
 })
-
-// Simple password hashing using Node.js crypto module
-function hashPassword(password: string): string {
-  return createHash('sha256').update(password).digest('hex')
-}
 
 const registerHandler: Handler = async (event) => {
   try {
@@ -39,101 +32,73 @@ const registerHandler: Handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: parsed.error.message }) }
     }
 
-    const { username, name, role, location, skills, weeklyCapacityHrs } = parsed.data
+    const { username, name, role, location, skills, weeklyCapacityHrs, password } = parsed.data
     const allowedDomain = (process.env.ALLOWED_EMAIL_DOMAIN || 'deloitte.com').toLowerCase()
     
     // Construct email from username and allowed domain
     const emailLower = `${username.toLowerCase().trim()}@${allowedDomain}`
 
-    // Initialize Supabase client
+    // Validate email domain
+    if (!emailLower.endsWith(`@${allowedDomain}`)) {
+      return { 
+        statusCode: 403, 
+        body: JSON.stringify({ error: `Only @${allowedDomain} email addresses are allowed` }) 
+      }
+    }
+
+    // Initialize Supabase Admin client (needs service role key for admin operations)
     const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_ANON_KEY
-    if (!supabaseUrl || !supabaseKey) {
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+    if (!supabaseUrl || !supabaseServiceKey) {
       return { statusCode: 500, body: JSON.stringify({ error: 'Database not configured' }) }
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Check if user already exists
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', emailLower)
-      .single()
-
-    if (existingUser) {
-      return { statusCode: 409, body: JSON.stringify({ error: 'User already exists' }) }
-    }
-
-    // Generate random password
-    const generatedPassword = generatePassword()
-    console.log('Generated password length:', generatedPassword.length)
+    // Generate random password if not provided
+    const userPassword = password || generatePassword()
     
-    const hashedPassword = hashPassword(generatedPassword)
-    console.log('Hashed password length:', hashedPassword.length)
+    // Get the site URL for email redirect
+    const siteUrl = process.env.URL || 'http://localhost:5173'
 
-    // Create user in database
-    console.log('Attempting to create user with data:', {
+    // Register user with Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
       email: emailLower,
-      username: username.toLowerCase().trim(),
-      name,
-      role,
-      location,
-      skills,
-      weeklyCapacityHrs
+      password: userPassword,
+      options: {
+        emailRedirectTo: `${siteUrl}/auth/callback`,
+        data: {
+          username: username.toLowerCase().trim(),
+          name,
+          role,
+          location,
+          skills,
+          weekly_capacity_hrs: weeklyCapacityHrs,
+          avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+        }
+      }
     })
-    
-    const { data: newUser, error } = await supabase
-      .from('users')
-      .insert({
-        email: emailLower,
-        username: username.toLowerCase().trim(),
-        password_hash: hashedPassword,
-        name,
-        role,
-        location,
-        skills,
-        weekly_capacity_hrs: weeklyCapacityHrs,
-        avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-        needs_password_change: true,
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single()
 
     if (error) {
-      console.error('Database error:', error)
-      console.error('Full error object:', JSON.stringify(error, null, 2))
+      console.error('Supabase Auth signup error:', error)
+      
+      // Handle specific errors
+      if (error.message.includes('already registered')) {
+        return { statusCode: 409, body: JSON.stringify({ error: 'User already exists' }) }
+      }
+      
       return { 
         statusCode: 500, 
         body: JSON.stringify({ 
-          error: 'Failed to create user - VERSION 2.0',
-          details: error.message || 'Unknown error',
-          code: error.code || 'NO_CODE',
-          hint: error.hint || 'NO_HINT',
-          errorType: typeof error,
-          errorKeys: Object.keys(error || {}),
-          timestamp: new Date().toISOString()
+          error: 'Failed to create user',
+          details: error.message
         }) 
       }
     }
 
-    // Send password via email
-    let emailSent = false;
-    try {
-      await sendEmail({
-        to: emailLower,
-        subject: 'Welcome to Deloitte Initiative Portal - Your Login Credentials',
-        html: createPasswordEmail(username, generatedPassword)
-      });
-      emailSent = true;
-      console.log('Email sent successfully to:', emailLower);
-    } catch (emailError) {
-      console.error('Email send error:', emailError);
-      // Don't fail registration if email fails, but log it
-    }
-
-    // Return success without creating session - user must login with received password
+    // Note: The trigger function will automatically create the user in the public.users table
+    // Email confirmation will be sent automatically by Supabase Auth
+    
     return {
       statusCode: 201,
       headers: {
@@ -141,35 +106,45 @@ const registerHandler: Handler = async (event) => {
       },
       body: JSON.stringify({ 
         ok: true,
-        message: emailSent 
-          ? 'Registration successful! Please check your email for login credentials and log in manually.'
-          : 'Registration successful! However, there was an issue sending your password via email. Please contact support.',
+        message: 'Registration successful! Please check your email to confirm your account before logging in.',
+        requiresEmailConfirmation: true,
         user: { 
-          id: newUser.id,
+          id: data.user?.id,
           email: emailLower,
-          username: newUser.username,
+          username: username.toLowerCase().trim(),
           name,
           role,
           location,
           skills,
-          weeklyCapacityHrs,
-          avatarUrl: newUser.avatar_url
+          weeklyCapacityHrs
         } 
       })
     }
   } catch (e: any) {
-    console.error('Outer catch block error:', e)
-    console.error('Error stack:', e.stack)
+    console.error('Registration error:', e)
     return { 
       statusCode: 500, 
       body: JSON.stringify({ 
         error: 'Server error',
-        details: e.message,
-        stack: e.stack,
-        type: e.constructor.name
+        details: e.message
       }) 
     }
   }
 }
 
 export const handler = withSecurity(registerHandler);
+
+// Generate a secure random password
+function generatePassword(): string {
+  const length = 16
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
+  let password = ''
+  const randomValues = new Uint8Array(length)
+  crypto.getRandomValues(randomValues)
+  
+  for (let i = 0; i < length; i++) {
+    password += charset[randomValues[i] % charset.length]
+  }
+  
+  return password
+}
