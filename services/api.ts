@@ -1,17 +1,9 @@
-
 import { Initiative, User, HelpWanted, InitiativeStatus, JoinRequest, JoinRequestStatus, Notification, NotificationType, Task, TaskStatus } from '../types';
 import * as db from './database';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client for direct operations
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from './supabase';
 
 // Current user state
 let currentUserId: string | null = null;
-
-const simulateDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // --- Notification Helper ---
 const generateNotification = async (data: Omit<Notification, 'id' | 'isRead' | 'createdAt'>) => {
@@ -32,35 +24,27 @@ export const getCurrentUser = async (): Promise<User | null> => {
 };
 
 export const getInitiatives = async (): Promise<Initiative[]> => {
-  await simulateDelay(200);
   return await db.getAllInitiatives();
 };
 
 export const getHelpWantedPosts = async (): Promise<HelpWanted[]> => {
-  await simulateDelay(200);
   return await db.getAllHelpWanted();
 }
 
 export const getAllJoinRequests = async (): Promise<JoinRequest[]> => {
-    await simulateDelay(100);
     return await db.getAllJoinRequests();
 }
 
-// getCurrentUser moved above
-
 export const getUsers = async (): Promise<User[]> => {
-    await simulateDelay(100);
     return await db.getAllUsers();
 }
 
 export const getUserById = async (id: string): Promise<User | undefined> => {
-  await simulateDelay(50);
   const user = await db.getUserById(id);
   return user || undefined;
 }
 
 export const getInitiativeById = async (id: string): Promise<Initiative | undefined> => {
-    await simulateDelay(50);
     const initiative = await db.getInitiativeById(id);
     return initiative || undefined;
 }
@@ -84,7 +68,6 @@ const fileToBase64 = (file: File): Promise<string> => new Promise((resolve, reje
 
 
 export const createInitiative = async (data: CreateInitiativeData): Promise<Initiative> => {
-    await simulateDelay(400);
     const creatingUser = await getCurrentUser();
     if (!creatingUser) throw new Error("No current user found");
 
@@ -121,7 +104,6 @@ export const createInitiative = async (data: CreateInitiativeData): Promise<Init
 export type CreateHelpWantedData = Omit<HelpWanted, 'id' | 'status'>;
 
 export const createHelpWantedPost = async(data: CreateHelpWantedData): Promise<HelpWanted> => {
-    await simulateDelay(300);
     const initiative = await getInitiativeById(data.initiativeId);
     if (!initiative) throw new Error("Initiative not found");
 
@@ -153,26 +135,17 @@ export const createHelpWantedPost = async(data: CreateHelpWantedData): Promise<H
 }
 
 export const updateHelpWantedPost = async (postId: string, data: Partial<Omit<HelpWanted, 'id' | 'initiativeId'>>): Promise<HelpWanted> => {
-    await simulateDelay(200);
-    const postIndex = memoryHelpWanted.findIndex(p => p.id === postId);
-    if (postIndex === -1) throw new Error("Help wanted post not found");
-    
-    const updatedPost = { ...memoryHelpWanted[postIndex], ...data };
-    memoryHelpWanted[postIndex] = updatedPost;
-    return JSON.parse(JSON.stringify(updatedPost));
+    const updatedPost = await db.updateHelpWanted(postId, data);
+    if (!updatedPost) throw new Error("Help wanted post not found");
+    return updatedPost;
 };
 
 export const deleteHelpWantedPost = async (postId: string): Promise<void> => {
-    await simulateDelay(300);
-    const initialLength = memoryHelpWanted.length;
-    memoryHelpWanted = memoryHelpWanted.filter(p => p.id !== postId);
-    if (memoryHelpWanted.length === initialLength) {
-        throw new Error("Help wanted post not found");
-    }
+    const success = await db.deleteHelpWanted(postId);
+    if (!success) throw new Error("Help wanted post not found or failed to delete");
 };
 
 export const updateInitiativeStatus = async (initiativeId: string, status: InitiativeStatus): Promise<Initiative | undefined> => {
-    await simulateDelay(300);
     const initiative = await db.getInitiativeById(initiativeId);
     if (initiative) {
         const updateData: any = { status };
@@ -180,14 +153,12 @@ export const updateInitiativeStatus = async (initiativeId: string, status: Initi
             updateData.endDate = new Date().toISOString().split('T')[0];
         }
         const updatedInitiative = await db.updateInitiative(initiativeId, updateData);
-        return updatedInitiative;
+        return updatedInitiative || undefined;
     }
     return undefined;
 }
 
 export const deleteInitiative = async (initiativeId: string): Promise<void> => {
-    await simulateDelay(500);
-    
     // Get the initiative to check ownership
     const initiative = await db.getInitiativeById(initiativeId);
     if (!initiative) throw new Error("Initiative not found");
@@ -203,7 +174,6 @@ export const deleteInitiative = async (initiativeId: string): Promise<void> => {
 // --- Join Request API ---
 
 export const getJoinRequestsForInitiative = async (initiativeId: string): Promise<JoinRequest[]> => {
-    await simulateDelay(150);
     return await db.getJoinRequestsForInitiative(initiativeId);
 };
 
@@ -216,7 +186,6 @@ export interface CreateJoinRequestData {
 }
 
 export const createJoinRequest = async (data: CreateJoinRequestData): Promise<JoinRequest> => {
-    await simulateDelay(300);
     const initiative = await getInitiativeById(data.initiativeId);
     const requester = await getUserById(data.userId);
 
@@ -242,7 +211,6 @@ export const createJoinRequest = async (data: CreateJoinRequestData): Promise<Jo
 };
 
 export const approveJoinRequest = async (requestId: string): Promise<void> => {
-    await simulateDelay(400);
     const updatedRequest = await db.updateJoinRequest(requestId, 'Approved');
     if (!updatedRequest) {
         throw new Error('Request not found or already actioned.');
@@ -255,8 +223,20 @@ export const approveJoinRequest = async (requestId: string): Promise<void> => {
         throw new Error('Initiative or User not found.');
     }
 
-    // Note: Team member management would need to be implemented in the database
-    // For now, we'll just update the request status
+    // Add user to team members
+    const { error } = await supabase
+      .from('initiative_team_members')
+      .insert({
+        initiative_id: initiative.id,
+        user_id: user.id,
+        committed_hours: 0 // Default, as join_requests doesn't track this yet
+      });
+
+    if (error) {
+        console.error("Failed to add team member:", error);
+        // Don't throw, as the request is already approved. Just log it.
+        // Ideally we should transaction this.
+    }
 
     await generateNotification({
         userId: user.id,
@@ -268,7 +248,6 @@ export const approveJoinRequest = async (requestId: string): Promise<void> => {
 };
 
 export const rejectJoinRequest = async (requestId: string): Promise<void> => {
-    await simulateDelay(400);
     const updatedRequest = await db.updateJoinRequest(requestId, 'Rejected');
     if (!updatedRequest) {
         throw new Error('Request not found or not pending');
@@ -288,20 +267,13 @@ export const rejectJoinRequest = async (requestId: string): Promise<void> => {
 };
 
 export const cancelJoinRequest = async (requestId: string): Promise<void> => {
-    await simulateDelay(300);
-    const requestIndex = memoryJoinRequests.findIndex(r => r.id === requestId);
-    if (requestIndex === -1) throw new Error("Request not found");
-
-    const request = memoryJoinRequests[requestIndex];
-    if (request.userId !== currentUserId) throw new Error("You can only cancel your own requests.");
-    if (request.status !== JoinRequestStatus.Pending) throw new Error("Only pending requests can be cancelled.");
-
-    memoryJoinRequests.splice(requestIndex, 1);
+    // We can use deleteJoinRequest for cancellation
+    const success = await db.deleteJoinRequest(requestId);
+    if (!success) throw new Error("Request not found or failed to cancel");
 };
 
 
 export const inviteUserToInitiative = async (initiativeId: string, inviteeId: string, inviterId: string): Promise<JoinRequest> => {
-    await simulateDelay(300);
     const initiative = await getInitiativeById(initiativeId);
     const invitee = await getUserById(inviteeId);
     const inviter = await getUserById(inviterId);
@@ -309,15 +281,15 @@ export const inviteUserToInitiative = async (initiativeId: string, inviteeId: st
     if (!initiative || !invitee || !inviter) throw new Error("Data not found");
     if (initiative.teamMembers.some(m => m.userId === inviteeId)) throw new Error("User is already on the team");
 
-    const newInvite: JoinRequest = {
-        id: `req-${Date.now()}`,
+    const newInviteData: Omit<JoinRequest, 'id' | 'createdAt'> = {
         initiativeId,
         userId: inviteeId,
         message: `${inviter.name} has invited you to join this project.`,
         status: JoinRequestStatus.Invited,
-        createdAt: new Date().toISOString(),
     };
-    memoryJoinRequests.unshift(newInvite);
+    
+    const newInvite = await db.createJoinRequest(newInviteData);
+    if (!newInvite) throw new Error("Failed to invite user");
 
     generateNotification({
         userId: inviteeId,
@@ -331,8 +303,6 @@ export const inviteUserToInitiative = async (initiativeId: string, inviteeId: st
 };
 
 export const acceptInvite = async (requestId: string, committedHours: number): Promise<void> => {
-    await simulateDelay(400);
-    
     // Get the join request from database
     const joinRequests = await db.getAllJoinRequests();
     const request = joinRequests.find(r => r.id === requestId);
@@ -345,13 +315,18 @@ export const acceptInvite = async (requestId: string, committedHours: number): P
     if (!initiative) throw new Error("Initiative not found");
 
     // Add user to team members in database
-    await supabase
+    // Use raw supabase call for now as db helper might not exist for this specific operation
+    // Or better, update database.ts to include addTeamMember
+    // For now, mirroring existing logic which uses supabase directly
+    const { error } = await supabase
       .from('initiative_team_members')
       .insert({
         initiative_id: request.initiativeId,
         user_id: request.userId,
         committed_hours: committedHours
       });
+      
+    if (error) throw error;
     
     // Remove the invitation from database
     await db.deleteJoinRequest(requestId);
@@ -366,14 +341,15 @@ export const acceptInvite = async (requestId: string, committedHours: number): P
 };
 
 export const declineInvite = async (requestId: string): Promise<void> => {
-    await simulateDelay(200);
-    const requestIndex = memoryJoinRequests.findIndex(r => r.id === requestId);
-    const request = memoryJoinRequests[requestIndex];
-    if (!request) return; // Fail silently if not found
+    // Get request details before deleting for notification
+    const joinRequests = await db.getAllJoinRequests();
+    const request = joinRequests.find(r => r.id === requestId);
+    
+    if (!request) return;
 
     const initiative = await getInitiativeById(request.initiativeId);
     
-    memoryJoinRequests.splice(requestIndex, 1);
+    await db.deleteJoinRequest(requestId);
 
      if (initiative) {
         generateNotification({
@@ -387,7 +363,6 @@ export const declineInvite = async (requestId: string): Promise<void> => {
 };
 
 export const updateCommitment = async (initiativeId: string, userId: string, newHours: number): Promise<void> => {
-    await simulateDelay(200);
     const initiative = await db.getInitiativeById(initiativeId);
     if (!initiative) throw new Error("Initiative not found");
 
@@ -405,34 +380,27 @@ export const updateCommitment = async (initiativeId: string, userId: string, new
 
 // --- Notification API ---
 export const getNotificationsForUser = async(userId: string): Promise<Notification[]> => {
-    await simulateDelay(150);
     return await db.getNotificationsForUser(userId);
 }
 
 export const markNotificationAsRead = async(notificationId: string): Promise<void> => {
-    await simulateDelay(50);
     await db.markNotificationAsRead(notificationId);
 }
 
 export const markAllNotificationsAsRead = async(userId: string): Promise<void> => {
-    await simulateDelay(100);
     await db.markAllNotificationsAsRead(userId);
 }
 
 // --- Task API ---
 export const getAllTasks = async (): Promise<Task[]> => {
-    await simulateDelay(100);
     return await db.getAllTasks();
 }
 
-export type CreateTaskData = Omit<Task, 'id' | 'status'>;
-
 export const createTask = async (data: CreateTaskData): Promise<Task> => {
-    await simulateDelay(300);
     const initiative = await getInitiativeById(data.initiativeId);
     if (!initiative) throw new Error("Initiative not found");
 
-    const newTaskData: Omit<Task, 'id'> = {
+    const newTaskData: Omit<Task, 'id' | 'createdAt'> = {
         ...data,
         status: TaskStatus.Todo,
     };
@@ -454,7 +422,6 @@ export const createTask = async (data: CreateTaskData): Promise<Task> => {
 };
 
 export const updateTask = async (taskId: string, updates: Partial<Task>): Promise<Task> => {
-    await simulateDelay(200);
     const updatedTask = await db.updateTask(taskId, updates);
     if (!updatedTask) throw new Error("Task not found");
 
@@ -476,54 +443,21 @@ export const updateTask = async (taskId: string, updates: Partial<Task>): Promis
 }
 
 export const updateTasks = async (updatedTasks: Task[]): Promise<void> => {
-    await simulateDelay(200);
-
-    if (updatedTasks.length === 0) {
-        // This can happen if an initiative has no tasks.
-        // If there were tasks before, we need to handle their removal.
-        const firstTask = memoryTasks.find(t => t.initiativeId === updatedTasks[0]?.initiativeId);
-        if(!firstTask) return; // No tasks for this initiative existed before, nothing to do.
-    }
+    if (updatedTasks.length === 0) return;
     
-    // The component sends a list of tasks for a single initiative.
-    // We need to merge this into our master list.
-    const initiativeIdToUpdate = updatedTasks[0]?.initiativeId || memoryTasks.find(t => !updatedTasks.some(ut => ut.id === t.id))?.initiativeId;
-
-    if (!initiativeIdToUpdate) {
-        // Can't determine which initiative to update, so we can't proceed.
-        return;
-    }
-
-    // All tasks that are NOT part of the initiative being updated.
-    const otherTasks = memoryTasks.filter(t => t.initiativeId !== initiativeIdToUpdate);
-
-    // The new full list of tasks is the other tasks plus the updated tasks for the current initiative.
-    const newMasterTaskList = [...otherTasks, ...updatedTasks];
-
-    // The check was failing because it was comparing a partial list to the full list.
-    // This new approach ensures we're always working with a complete task list for the update.
-    // The set of task IDs should remain the same before and after a reorder/status change operation.
-    if (newMasterTaskList.map(t => t.id).sort().join(',') !== memoryTasks.map(t => t.id).sort().join(',')) {
-        console.error("Task list mismatch during update. Aborting.");
-        throw new Error("Task list mismatch during update. The set of tasks being saved is different from the original set.");
-    }
-    
-    memoryTasks = JSON.parse(JSON.stringify(newMasterTaskList));
+    // Process updates in parallel
+    await Promise.all(updatedTasks.map(task => db.updateTask(task.id, task)));
 };
 
 
 export const deleteTask = async (taskId: string): Promise<void> => {
-    await simulateDelay(300);
-    const taskIndex = memoryTasks.findIndex(t => t.id === taskId);
-    if (taskIndex === -1) throw new Error("Task not found");
-
-    memoryTasks.splice(taskIndex, 1);
+    const success = await db.deleteTask(taskId);
+    if (!success) throw new Error("Failed to delete task");
 };
 
 
 // --- User Profile API ---
 export const updateUserProfile = async (userId: string, data: Partial<Pick<User, 'skills' | 'location' | 'weeklyCapacityHrs'>>): Promise<User> => {
-    await simulateDelay(300);
     const updatedUser = await db.updateUser(userId, data);
     if (!updatedUser) throw new Error("User not found");
     
@@ -532,7 +466,6 @@ export const updateUserProfile = async (userId: string, data: Partial<Pick<User,
 
 // --- Dashboard API ---
 export const getDashboardData = async () => {
-    await simulateDelay(500);
     const initiatives = await db.getAllInitiatives();
     const users = await db.getAllUsers();
 

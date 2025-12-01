@@ -2,6 +2,11 @@ import { User, Initiative, HelpWanted, JoinRequest, JoinRequestStatus, Task, Tas
 
 export const CURRENT_USER_ID = 'user-1';
 
+// Dev mode detection
+export const IS_DEV_MODE = process.env.NODE_ENV === 'development' || 
+  process.env.NETLIFY_DEV === 'true' || 
+  window.location.hostname.includes('deloitte-portal-dev');
+
 export const AVAILABLE_LOCATIONS = [
   'Bangalore',
   'Chennai',

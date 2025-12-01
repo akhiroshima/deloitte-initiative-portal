@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Bulletin from './components/Bulletin';
@@ -12,7 +12,9 @@ import AuthModal from './components/AuthModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import { OnboardingBanner } from './components/OnboardingBanner';
 import { NetworkError } from './components/NetworkError';
+import FeedbackButton from './components/FeedbackButton';
 import * as api from './services/api';
+import { supabase } from './services/supabase';
 import { Initiative, User, HelpWanted, JoinRequest, Notification, Task } from './types';
 import LoadingSkeleton from './components/ui/LoadingSkeleton';
 import { LoadingTransition } from './components/ui/LoadingTransition';
@@ -50,6 +52,8 @@ const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [networkError, setNetworkError] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -59,11 +63,13 @@ const App: React.FC = () => {
   }, [theme]);
 
   // Check authentication status
-  const checkAuth = useCallback(async () => {
+  const checkAuth = useCallback(async (): Promise<User | null> => {
     try {
       setAuthLoading(true);
       console.log("Checking authentication...");
-      const response = await fetch('/.netlify/functions/auth-me');
+      const response = await fetch('/.netlify/functions/auth-me', {
+        credentials: 'include'
+      });
       
       // Handle non-200 responses
       if (!response.ok) {
@@ -71,7 +77,7 @@ const App: React.FC = () => {
         setIsAuthenticated(false);
         setCurrentUser(null);
         api.setCurrentUserId(null);
-        return false;
+        return null;
       }
       
       const data = await response.json();
@@ -79,85 +85,152 @@ const App: React.FC = () => {
       
       if (data.authenticated && data.user) {
         console.log("User authenticated:", data.user.id);
+        
+        // Hydrate Supabase client if session is present
+        if (data.session && supabase) {
+          const { error } = await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+          if (error) console.error("Failed to set Supabase session:", error);
+        }
+
         setIsAuthenticated(true);
         setCurrentUser(data.user);
         // Sync with API layer
         api.setCurrentUserId(data.user.id);
-        return true;
+        return data.user;
       } else {
         console.log("User not authenticated");
         setIsAuthenticated(false);
         setCurrentUser(null);
         api.setCurrentUserId(null);
-        return false;
+        return null;
       }
     } catch (error) {
       console.error("Auth check failed:", error);
       setIsAuthenticated(false);
       setCurrentUser(null);
       api.setCurrentUserId(null);
-      return false;
+      return null;
     } finally {
       setAuthLoading(false);
     }
   }, []);
 
-  const handleDataChange = useCallback(async () => {
-    if (!isAuthenticated || !currentUser?.id) return;
+  // Stable reference for handleDataChange to prevent re-renders
+  const handleDataChangeRef = useRef<(user?: User) => Promise<void>>();
+  const isMountedRef = useRef(true);
+  
+  handleDataChangeRef.current = async (user?: User) => {
+    if (!isMountedRef.current) return; // Don't update state if component is unmounted
+    
+    const userToUse = user || currentUser;
+    if (!userToUse?.id) {
+      console.log("No user available for data loading");
+      return;
+    }
+    
+    // Prevent multiple simultaneous data loading calls
+    if (isLoadingData) {
+      console.log("Data loading already in progress, skipping...");
+      return;
+    }
     
     try {
+      setIsLoadingData(true);
       setNetworkError(false);
+      console.log("Loading data for user:", userToUse.id);
       const [initiativesData, helpWantedData, usersData, joinRequestsData, tasksData, notificationsData] = await Promise.all([
         api.getInitiatives(),
         api.getHelpWantedPosts(),
         api.getUsers(),
         api.getAllJoinRequests(),
         api.getAllTasks(),
-        api.getNotificationsForUser(currentUser.id)
+        api.getNotificationsForUser(userToUse.id)
       ]);
+      
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) return;
+      
       setInitiatives(initiativesData);
       setHelpWanted(helpWantedData);
       setUsers(usersData);
       setJoinRequests(joinRequestsData);
       setTasks(tasksData);
       setNotifications(notificationsData.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      console.log("Data loaded successfully:", { 
+        initiatives: initiativesData.length, 
+        users: usersData.length 
+      });
 
     } catch (error) {
       console.error("Failed to fetch app data:", error);
-      setNetworkError(true);
+      if (isMountedRef.current) {
+        setNetworkError(true);
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+        setIsLoadingData(false);
+      }
     }
-  }, [isAuthenticated, currentUser]);
+  };
+
+  const handleDataChange = useCallback((user?: User) => {
+    return handleDataChangeRef.current?.(user);
+  }, []);
 
   useEffect(() => {
+    if (isInitialized) return; // Prevent multiple initializations
+    
     const initializeApp = async () => {
       setLoading(true);
-      const authResult = await checkAuth();
-      if (authResult) {
-        await handleDataChange();
+      const authenticatedUser = await checkAuth();
+      if (authenticatedUser) {
+        await handleDataChange(authenticatedUser);
       } else {
         setShowAuthModal(true);
+        setLoading(false);
       }
-      setLoading(false);
+      setIsInitialized(true);
     };
     
     initializeApp();
-  }, [checkAuth]);
+  }, []); // Empty dependency array - run only once on mount
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Authentication handlers
-  const handleAuthSuccess = async (user: User) => {
+  const handleAuthSuccess = async (user: User, session?: any) => {
     setIsAuthenticated(true);
     setCurrentUser(user);
+
+    if (session && supabase) {
+      const { error } = await supabase.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      });
+      if (error) console.error("Failed to set Supabase session:", error);
+    }
+
     // Sync with API layer
     api.setCurrentUserId(user.id);
     setShowAuthModal(false);
-    await handleDataChange();
+    await handleDataChange(user);
   };
 
   const handleLogout = async () => {
     try {
-      await fetch('/.netlify/functions/auth-logout', { method: 'POST' });
+      await fetch('/.netlify/functions/auth-logout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -462,6 +535,9 @@ const App: React.FC = () => {
               </div>
             </main>
         </div>
+        
+        {/* Feedback Button - Only visible in development */}
+        <FeedbackButton />
       </div>
     </ErrorBoundary>
   );

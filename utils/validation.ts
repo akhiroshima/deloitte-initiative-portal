@@ -1,4 +1,4 @@
-// Input validation utilities for security and data integrity
+import DOMPurify from 'dompurify';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -255,13 +255,7 @@ export const validateJoinRequestMessage = (message: string): ValidationResult =>
 
 // Sanitize HTML content
 export const sanitizeHtml = (html: string): string => {
-  // Basic HTML sanitization - in production, use a proper library like DOMPurify
-  return html
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+  return DOMPurify.sanitize(html);
 };
 
 // Sanitize text input

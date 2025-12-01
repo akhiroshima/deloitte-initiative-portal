@@ -37,7 +37,7 @@ const UserSearchSelect: React.FC<UserSearchSelectProps> = ({ allUsers, selectedU
   
   return (
     <div className="relative mt-1">
-      <div className="flex flex-wrap gap-2 rounded-md border border-input bg-background p-2 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+      <div className="flex flex-wrap gap-2 rounded-md border border-input bg-card p-2 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
         {selectedUsers.map(user => (
           <div key={user.id} className="flex items-center gap-1.5 rounded-full bg-muted py-1 pl-2 pr-1">
             <img src={user.avatarUrl} alt={user.name} className="h-5 w-5 rounded-full" />

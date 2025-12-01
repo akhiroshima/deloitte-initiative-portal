@@ -23,7 +23,9 @@ const Dashboard: React.FC<DashboardProps> = ({ initiatives, users, tasks, onSele
   const dashboardData = useMemo(() => {
     if (initiatives.length === 0 || users.length === 0) return null;
 
-    const active = initiatives.filter(i => i.status === 'In Progress').length;
+    const total = initiatives.length;
+    const active = initiatives.filter(i => i.status === 'In Progress' || i.status === 'Under Review').length;
+    const searching = initiatives.filter(i => i.status === 'Searching Talent').length;
     
     const now = new Date();
     const q2Start = new Date(now.getFullYear(), 3, 1);
@@ -46,13 +48,15 @@ const Dashboard: React.FC<DashboardProps> = ({ initiatives, users, tasks, onSele
     // New, more accurate utilization calculation
     const utilizationByUser: { [userId: string]: number } = {};
     initiatives.forEach(initiative => {
-        if (initiative.status === 'In Progress' || initiative.status === 'Under Review') {
-            initiative.teamMembers.forEach(member => {
-                if (!utilizationByUser[member.userId]) {
-                    utilizationByUser[member.userId] = 0;
-                }
-                utilizationByUser[member.userId] += member.committedHours;
-            });
+        if (initiative.status === 'In Progress' || initiative.status === 'Under Review' || initiative.status === 'Searching Talent') {
+            if (initiative.teamMembers) {
+                initiative.teamMembers.forEach(member => {
+                    if (!utilizationByUser[member.userId]) {
+                        utilizationByUser[member.userId] = 0;
+                    }
+                    utilizationByUser[member.userId] += member.committedHours;
+                });
+            }
         }
     });
 
@@ -66,7 +70,7 @@ const Dashboard: React.FC<DashboardProps> = ({ initiatives, users, tasks, onSele
     });
 
     return {
-        kpis: { active, completedQ2, avgCycleTime: `${avgCycleTimeDays} days` },
+        kpis: { total, active, searching, completedQ2, avgCycleTime: `${avgCycleTimeDays} days` },
         utilization: Object.entries(utilizationByLocation).map(([location, data]) => ({
             location,
             ...data,
@@ -91,7 +95,7 @@ const Dashboard: React.FC<DashboardProps> = ({ initiatives, users, tasks, onSele
     const data = new Map<string, { assignedHrs: number; capacityHrs: number; utilizationPercentage: number; activeInitiatives: Initiative[] }>();
     users.forEach(user => {
       const assignedHrs = initiatives
-        .filter(i => i.status === 'In Progress' || i.status === 'Under Review')
+        .filter(i => i.status === 'In Progress' || i.status === 'Under Review' || i.status === 'Searching Talent')
         .flatMap(i => i.teamMembers || [])
         .filter(m => m.userId === user.id)
         .reduce((sum, m) => sum + m.committedHours, 0);
@@ -100,7 +104,7 @@ const Dashboard: React.FC<DashboardProps> = ({ initiatives, users, tasks, onSele
       const utilizationPercentage = capacityHrs > 0 ? Math.round((assignedHrs / capacityHrs) * 100) : 0;
       
       const activeInitiatives = initiatives.filter(i => 
-        i.teamMembers && i.teamMembers.some(m => m.userId === user.id) && (i.status === 'In Progress' || i.status === 'Under Review')
+        i.teamMembers && i.teamMembers.some(m => m.userId === user.id) && (i.status === 'In Progress' || i.status === 'Under Review' || i.status === 'Searching Talent')
       );
       
       data.set(user.id, { assignedHrs, capacityHrs, utilizationPercentage, activeInitiatives });
@@ -161,9 +165,9 @@ const Dashboard: React.FC<DashboardProps> = ({ initiatives, users, tasks, onSele
             </>
         ) : (
             <>
+                <KpiCard title="Total Initiatives" value={dashboardData.kpis.total.toString()} />
                 <KpiCard title="Active Initiatives" value={dashboardData.kpis.active.toString()} />
-                <KpiCard title="Completed (Q2)" value={dashboardData.kpis.completedQ2.toString()} />
-                <KpiCard title="Avg. Cycle Time" value={dashboardData.kpis.avgCycleTime} />
+                <KpiCard title="Searching Talent" value={dashboardData.kpis.searching.toString()} />
             </>
         )}
       </div>

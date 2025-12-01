@@ -5,9 +5,9 @@ plugins = []
 headers = []
 
 [build]
-publish = "/Users/ahirosh/Desktop/FIportal/deloitte-initiative-portal"
+publish = "/Users/ahirosh/Desktop/FIportal/deloitte-initiative-portal/dist"
 publishOrigin = "config"
-commandOrigin = "config"
+commandOrigin = "ui"
 command = "npm run build"
 functions = "/Users/ahirosh/Desktop/FIportal/deloitte-initiative-portal/netlify/functions"
 

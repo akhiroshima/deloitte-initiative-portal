@@ -41,7 +41,7 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({ options, sele
 
     return (
         <div className="relative mt-1" ref={dropdownRef}>
-            <div onClick={handleToggle} className="flex min-h-[42px] flex-wrap items-center gap-2 rounded-md border border-input bg-background p-2 text-sm shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-background cursor-pointer">
+            <div onClick={handleToggle} className="flex min-h-[42px] flex-wrap items-center gap-2 rounded-md border border-input bg-card p-2 text-sm shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-background cursor-pointer">
                 {selectedOptions.length === 0 && <span className="text-muted-foreground">{placeholder}</span>}
                 {selectedOptions.map(option => (
                     <span key={option} className="flex items-center gap-1.5 rounded-full bg-muted py-0.5 pl-2 pr-1 font-medium text-muted-foreground">

@@ -1,20 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { Initiative, User, HelpWanted, JoinRequest, Task, Notification } from '../types';
-
-// Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-if (!supabaseUrl || !supabaseKey) {
-  console.warn('Supabase credentials not found. Using mock data.');
-}
-
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-
-// Helper function to check if database is available
-const isDatabaseAvailable = () => {
-  return supabase !== null;
-};
+import { supabase, isDatabaseAvailable } from './supabase';
 
 // Users CRUD
 export const createUser = async (userData: Omit<User, 'id'>): Promise<User | null> => {
@@ -300,6 +285,21 @@ export const createInitiative = async (initiative: Omit<Initiative, 'id'>): Prom
     
     if (error) throw error;
     
+    // Automatically add owner as team member with default committed hours
+    const defaultCommittedHours = 10; // Default hours per week for owner
+    const { error: teamMemberError } = await supabase!
+      .from('initiative_team_members')
+      .insert({
+        initiative_id: data.id,
+        user_id: data.owner_id,
+        committed_hours: defaultCommittedHours
+      });
+    
+    if (teamMemberError) {
+      console.error('Error adding owner as team member:', teamMemberError);
+      // Continue execution - don't fail initiative creation if team member addition fails
+    }
+    
     // Fetch owner data
     const { data: ownerData } = await supabase!
       .from('users')
@@ -312,7 +312,10 @@ export const createInitiative = async (initiative: Omit<Initiative, 'id'>): Prom
       title: data.title,
       description: data.description,
       ownerId: data.owner_id,
-      teamMembers: [], // New initiatives start with empty team
+      teamMembers: [{
+        userId: data.owner_id,
+        committedHours: defaultCommittedHours
+      }], // Owner is automatically a team member
       status: data.status,
       startDate: data.start_date,
       endDate: data.end_date,
@@ -548,6 +551,78 @@ export const createHelpWanted = async (post: Omit<HelpWanted, 'id'>): Promise<He
   } catch (error) {
     console.error('Error creating help wanted post:', error);
     return null;
+  }
+};
+
+export const updateHelpWanted = async (id: string, updates: Partial<HelpWanted>): Promise<HelpWanted | null> => {
+  if (!isDatabaseAvailable()) return null;
+  
+  try {
+    const { data, error } = await supabase!
+      .from('help_wanted')
+      .update({
+        skill: updates.skill,
+        hours_per_week: updates.hoursPerWeek,
+        status: updates.status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select(`
+        *,
+        initiative:initiatives(*)
+      `)
+      .single();
+    
+    if (error) throw error;
+    return {
+      id: data.id,
+      initiativeId: data.initiative_id,
+      skill: data.skill,
+      hoursPerWeek: data.hours_per_week,
+      status: data.status,
+      initiative: {
+        id: data.initiative.id,
+        title: data.initiative.title,
+        description: data.initiative.description,
+        status: data.initiative.status,
+        startDate: data.initiative.start_date,
+        endDate: data.initiative.end_date,
+        skillsNeeded: data.initiative.skills_needed || [],
+        locations: data.initiative.locations || [],
+        tags: data.initiative.tags || [],
+        coverImageUrl: data.initiative.cover_image_url,
+        owner: {
+          id: '',
+          name: '',
+          email: '',
+          role: 'Developer',
+          skills: [],
+          location: '',
+          weeklyCapacityHrs: 40,
+          avatarUrl: ''
+        }
+      }
+    };
+  } catch (error) {
+    console.error('Error updating help wanted post:', error);
+    return null;
+  }
+};
+
+export const deleteHelpWanted = async (id: string): Promise<boolean> => {
+  if (!isDatabaseAvailable()) return false;
+  
+  try {
+    const { error } = await supabase!
+      .from('help_wanted')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting help wanted post:', error);
+    return false;
   }
 };
 
