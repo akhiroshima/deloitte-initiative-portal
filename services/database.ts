@@ -554,6 +554,78 @@ export const createHelpWanted = async (post: Omit<HelpWanted, 'id'>): Promise<He
   }
 };
 
+export const updateHelpWanted = async (id: string, updates: Partial<HelpWanted>): Promise<HelpWanted | null> => {
+  if (!isDatabaseAvailable()) return null;
+  
+  try {
+    const { data, error } = await supabase!
+      .from('help_wanted')
+      .update({
+        skill: updates.skill,
+        hours_per_week: updates.hoursPerWeek,
+        status: updates.status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select(`
+        *,
+        initiative:initiatives(*)
+      `)
+      .single();
+    
+    if (error) throw error;
+    return {
+      id: data.id,
+      initiativeId: data.initiative_id,
+      skill: data.skill,
+      hoursPerWeek: data.hours_per_week,
+      status: data.status,
+      initiative: {
+        id: data.initiative.id,
+        title: data.initiative.title,
+        description: data.initiative.description,
+        status: data.initiative.status,
+        startDate: data.initiative.start_date,
+        endDate: data.initiative.end_date,
+        skillsNeeded: data.initiative.skills_needed || [],
+        locations: data.initiative.locations || [],
+        tags: data.initiative.tags || [],
+        coverImageUrl: data.initiative.cover_image_url,
+        owner: {
+          id: '',
+          name: '',
+          email: '',
+          role: 'Developer',
+          skills: [],
+          location: '',
+          weeklyCapacityHrs: 40,
+          avatarUrl: ''
+        }
+      }
+    };
+  } catch (error) {
+    console.error('Error updating help wanted post:', error);
+    return null;
+  }
+};
+
+export const deleteHelpWanted = async (id: string): Promise<boolean> => {
+  if (!isDatabaseAvailable()) return false;
+  
+  try {
+    const { error } = await supabase!
+      .from('help_wanted')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting help wanted post:', error);
+    return false;
+  }
+};
+
 // Join Requests CRUD
 export const getAllJoinRequests = async (): Promise<JoinRequest[]> => {
   if (!isDatabaseAvailable()) return [];

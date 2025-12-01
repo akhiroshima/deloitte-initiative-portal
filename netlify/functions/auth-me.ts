@@ -10,6 +10,7 @@ export const handler: Handler = async (event) => {
     // Parse cookies
     const cookies = parseCookies(event.headers.cookie)
     const accessToken = cookies['sb-access-token']
+    const refreshToken = cookies['sb-refresh-token']
     
     if (!accessToken) {
       console.log('No access token found in cookies');
@@ -42,6 +43,12 @@ export const handler: Handler = async (event) => {
       .eq('auth_user_id', user.id)
       .single()
 
+    const session = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      user: user
+    }
+
     if (userError || !userData) {
       console.log('User data not found in custom table:', userError?.message);
       
@@ -51,6 +58,7 @@ export const handler: Handler = async (event) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           authenticated: true, 
+          session,
           user: {
             id: user.id,
             email: user.email,
@@ -72,6 +80,7 @@ export const handler: Handler = async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         authenticated: true, 
+        session,
         user: {
           id: userData.id,
           auth_user_id: userData.auth_user_id,

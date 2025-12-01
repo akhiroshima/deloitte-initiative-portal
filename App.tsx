@@ -14,6 +14,7 @@ import { OnboardingBanner } from './components/OnboardingBanner';
 import { NetworkError } from './components/NetworkError';
 import FeedbackButton from './components/FeedbackButton';
 import * as api from './services/api';
+import { supabase } from './services/supabase';
 import { Initiative, User, HelpWanted, JoinRequest, Notification, Task } from './types';
 import LoadingSkeleton from './components/ui/LoadingSkeleton';
 import { LoadingTransition } from './components/ui/LoadingTransition';
@@ -84,6 +85,16 @@ const App: React.FC = () => {
       
       if (data.authenticated && data.user) {
         console.log("User authenticated:", data.user.id);
+        
+        // Hydrate Supabase client if session is present
+        if (data.session && supabase) {
+          const { error } = await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+          if (error) console.error("Failed to set Supabase session:", error);
+        }
+
         setIsAuthenticated(true);
         setCurrentUser(data.user);
         // Sync with API layer
@@ -196,9 +207,18 @@ const App: React.FC = () => {
   }, []);
 
   // Authentication handlers
-  const handleAuthSuccess = async (user: User) => {
+  const handleAuthSuccess = async (user: User, session?: any) => {
     setIsAuthenticated(true);
     setCurrentUser(user);
+
+    if (session && supabase) {
+      const { error } = await supabase.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      });
+      if (error) console.error("Failed to set Supabase session:", error);
+    }
+
     // Sync with API layer
     api.setCurrentUserId(user.id);
     setShowAuthModal(false);

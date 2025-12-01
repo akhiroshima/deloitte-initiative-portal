@@ -35,6 +35,8 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [editingCommitmentFor, setEditingCommitmentFor] = useState<string | null>(null);
   const [newCommitment, setNewCommitment] = useState(0);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { addToast } = useToasts();
 
@@ -130,15 +132,31 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
   }
 
   const handleApprove = async (requestId: string) => {
-    await api.approveJoinRequest(requestId);
-    addToast('Request approved.', 'success');
-    onDataChange();
+    setProcessingId(requestId);
+    try {
+      await api.approveJoinRequest(requestId);
+      addToast('Request approved.', 'success');
+      onDataChange();
+    } catch (error) {
+      addToast('Failed to approve request.', 'error');
+      console.error(error);
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const handleReject = async (requestId: string) => {
-    await api.rejectJoinRequest(requestId);
-    addToast('Request rejected.', 'info');
-    onDataChange();
+    setProcessingId(requestId);
+    try {
+      await api.rejectJoinRequest(requestId);
+      addToast('Request rejected.', 'info');
+      onDataChange();
+    } catch (error) {
+      addToast('Failed to reject request.', 'error');
+      console.error(error);
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const handleRequestSubmitted = () => {
@@ -164,6 +182,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
 
   const handleDeleteInitiative = async () => {
     if (window.confirm('Are you sure you want to permanently delete this initiative? This will also delete all associated tasks, roles, and requests. This action cannot be undone.')) {
+        setIsDeleting(true);
         try {
             await api.deleteInitiative(initiative.id);
             addToast('Initiative deleted successfully.', 'success');
@@ -172,6 +191,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
         } catch (error) {
             addToast(error instanceof Error ? error.message : 'Failed to delete initiative.', 'error');
             console.error(error);
+            setIsDeleting(false);
         }
     }
   };
@@ -402,9 +422,8 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                   </div>
                   {isOwner && (
                     <div className="mt-4 pt-4 border-t border-destructive/20">
-                        <Button variant="destructive" className="w-full" onClick={handleDeleteInitiative}>
-                            <Trash2 className="h-5 w-5 mr-2 -ml-1" />
-                            Delete Initiative
+                        <Button variant="destructive" className="w-full" onClick={handleDeleteInitiative} disabled={isDeleting}>
+                            {isDeleting ? 'Deleting...' : <><Trash2 className="h-5 w-5 mr-2 -ml-1" /> Delete Initiative</>}
                         </Button>
                     </div>
                    )}
@@ -497,11 +516,11 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                         <p className="text-sm text-foreground bg-muted p-4 rounded-md">{request.message}</p>
                         {isOwner && request.status === 'Pending' && (
                           <div className="mt-4 flex gap-3">
-                            <Button onClick={() => handleApprove(request.id)}>
-                              <CheckCircle className="h-5 w-5 mr-2 -ml-1" /> Approve
+                            <Button onClick={() => handleApprove(request.id)} disabled={!!processingId}>
+                              {processingId === request.id ? 'Processing...' : <><CheckCircle className="h-5 w-5 mr-2 -ml-1" /> Approve</>}
                             </Button>
-                            <Button variant="secondary" onClick={() => handleReject(request.id)}>
-                              <XCircle className="h-5 w-5 mr-2 -ml-1" /> Reject
+                            <Button variant="secondary" onClick={() => handleReject(request.id)} disabled={!!processingId}>
+                              {processingId === request.id ? 'Processing...' : <><XCircle className="h-5 w-5 mr-2 -ml-1" /> Reject</>}
                             </Button>
                           </div>
                         )}

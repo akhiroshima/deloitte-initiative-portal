@@ -11,7 +11,7 @@ import { AVAILABLE_LOCATIONS, IS_DEV_MODE } from '../constants';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAuthSuccess: (user: any) => void;
+  onAuthSuccess: (user: any, session?: any) => void;
 }
 
 type AuthMode = 'login' | 'register';
@@ -63,7 +63,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
       const data = await response.json();
 
       if (response.ok) {
-        onAuthSuccess(data.user);
+        onAuthSuccess(data.user, data.session);
         onClose();
       } else {
         // More specific error messages
