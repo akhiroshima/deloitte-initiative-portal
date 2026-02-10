@@ -31,9 +31,10 @@ export const addSecurityHeaders = (response: any) => {
 };
 
 // CORS configuration
+// In production we explicitly allow the deployed Netlify sites.
 export const corsHeaders = {
   'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production' 
-    ? 'https://your-domain.com' // Replace with actual domain
+    ? 'https://deloitte-initiative-portal.netlify.app'
     : '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',

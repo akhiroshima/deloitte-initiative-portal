@@ -1,10 +1,12 @@
 import type { Handler } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
+import { withSecurity } from './_lib/security'
+import { parseCookies, clearCookie } from './_lib/cookies'
 
-export const handler: Handler = async (event) => {
+const logoutHandler: Handler = async (event) => {
   try {
     if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, body: 'Method Not Allowed' }
+      return { statusCode: 405, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Method Not Allowed' }) }
     }
 
     // Parse cookies
@@ -15,7 +17,7 @@ export const handler: Handler = async (event) => {
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_ANON_KEY
     if (!supabaseUrl || !supabaseKey) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'Database not configured' }) }
+      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Database not configured' }) }
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -48,34 +50,8 @@ export const handler: Handler = async (event) => {
     }
   } catch (e: any) {
     console.error('Logout error:', e)
-    return { statusCode: 500, body: JSON.stringify({ error: e.message || 'Server error' }) }
+    return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: e.message || 'Server error' }) }
   }
 }
 
-// Helper to parse cookies
-function parseCookies(header?: string): Record<string, string> {
-  const out: Record<string, string> = {}
-  if (!header) return out
-  header.split(';').forEach(part => {
-    const idx = part.indexOf('=')
-    if (idx > -1) {
-      const k = part.slice(0, idx).trim()
-      const v = decodeURIComponent(part.slice(idx + 1))
-      out[k] = v
-    }
-  })
-  return out
-}
-
-// Helper to clear a cookie
-function clearCookie(name: string, secure: boolean): string {
-  const parts = [
-    `${name}=deleted`,
-    'Path=/',
-    'HttpOnly',
-    'SameSite=Lax',
-    'Expires=Thu, 01 Jan 1970 00:00:00 GMT'
-  ]
-  if (secure) parts.push('Secure')
-  return parts.join('; ')
-}
+export const handler = withSecurity(logoutHandler);

@@ -1,4 +1,19 @@
-import DOMPurify from 'dompurify';
+// Input validation utilities for security and data integrity
+// Shared constants align client and server (e.g. auth-register Zod schemas).
+
+export const VALIDATION = {
+  password: { minLength: 8, maxLength: 128 },
+  weeklyCapacity: { min: 1, max: 40 },
+  skills: { maxCount: 20, maxLengthPer: 50 },
+  name: { minLength: 2, maxLength: 100 },
+  initiativeTitle: { minLength: 3, maxLength: 200 },
+  initiativeDescription: { minLength: 10, maxLength: 5000 },
+  taskTitle: { minLength: 3, maxLength: 200 },
+  taskDescription: { maxLength: 2000 },
+  joinRequestMessage: { maxLength: 1000 },
+  username: { minLength: 2, maxLength: 50 },
+  email: { maxLength: 254 },
+} as const;
 
 export interface ValidationResult {
   isValid: boolean;
@@ -132,8 +147,8 @@ export const validateSkills = (skills: string[]): ValidationResult => {
   if (!skills || skills.length === 0) {
     errors.push('At least one skill is required');
   } else {
-    if (skills.length > 20) {
-      errors.push('Too many skills (maximum 20)');
+    if (skills.length > VALIDATION.skills.maxCount) {
+      errors.push(`Too many skills (maximum ${VALIDATION.skills.maxCount})`);
     }
     
     for (const skill of skills) {
@@ -141,8 +156,8 @@ export const validateSkills = (skills: string[]): ValidationResult => {
         errors.push('Skills cannot be empty');
         break;
       }
-      if (skill.length > 50) {
-        errors.push('Each skill must be 50 characters or less');
+      if (skill.length > VALIDATION.skills.maxLengthPer) {
+        errors.push(`Each skill must be ${VALIDATION.skills.maxLengthPer} characters or less`);
         break;
       }
       if (!/^[a-zA-Z0-9\s\-_]+$/.test(skill)) {
@@ -193,8 +208,8 @@ export const validateWeeklyCapacity = (capacity: number): ValidationResult => {
       errors.push('Weekly capacity must be a whole number');
     } else if (capacity < 1) {
       errors.push('Weekly capacity must be at least 1 hour');
-    } else if (capacity > 80) {
-      errors.push('Weekly capacity cannot exceed 80 hours');
+    } else if (capacity > VALIDATION.weeklyCapacity.max) {
+      errors.push(`Weekly capacity cannot exceed ${VALIDATION.weeklyCapacity.max} hours`);
     }
   }
   
@@ -255,7 +270,13 @@ export const validateJoinRequestMessage = (message: string): ValidationResult =>
 
 // Sanitize HTML content
 export const sanitizeHtml = (html: string): string => {
-  return DOMPurify.sanitize(html);
+  // Basic HTML sanitization - in production, use a proper library like DOMPurify
+  return html
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
 };
 
 // Sanitize text input

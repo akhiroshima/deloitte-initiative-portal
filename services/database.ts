@@ -1,4 +1,4 @@
-import { Initiative, User, HelpWanted, JoinRequest, Task, Notification } from '../types';
+import { Initiative, InitiativeStatus, User, HelpWanted, JoinRequest, JoinRequestStatus, Task, TaskStatus, Notification, NotificationType } from '../types';
 import { supabase, isDatabaseAvailable } from './supabase';
 
 // Users CRUD
@@ -11,7 +11,6 @@ export const createUser = async (userData: Omit<User, 'id'>): Promise<User | nul
       .insert({
         email: userData.email,
         username: userData.username,
-        password_hash: userData.password_hash || '',
         name: userData.name,
         role: userData.role,
         is_admin: userData.isAdmin || false,
@@ -100,21 +99,30 @@ export const getAllUsers = async (): Promise<User[]> => {
   }
 };
 
+function pickDefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  ) as Partial<T>;
+}
+
 export const updateUser = async (id: string, updates: Partial<User>): Promise<User | null> => {
   if (!isDatabaseAvailable()) return null;
   
   try {
+    const row: Record<string, unknown> = pickDefined({
+      name: updates.name,
+      role: updates.role,
+      skills: updates.skills,
+      location: updates.location,
+      weekly_capacity_hrs: updates.weeklyCapacityHrs,
+      avatar_url: updates.avatarUrl,
+    });
+    if (Object.keys(row).length === 0) return getUserById(id);
+    row.updated_at = new Date().toISOString();
+
     const { data, error } = await supabase!
       .from('users')
-      .update({
-        name: updates.name,
-        role: updates.role,
-        skills: updates.skills,
-        location: updates.location,
-        weekly_capacity_hrs: updates.weeklyCapacityHrs,
-        avatar_url: updates.avatarUrl,
-        updated_at: new Date().toISOString()
-      })
+      .update(row)
       .eq('id', id)
       .select()
       .single();
@@ -138,64 +146,61 @@ export const updateUser = async (id: string, updates: Partial<User>): Promise<Us
   }
 };
 
-// Initiatives CRUD
+// Initiatives CRUD (single query with joins to avoid N+1)
 export const getAllInitiatives = async (): Promise<Initiative[]> => {
   if (!isDatabaseAvailable()) return [];
   
   try {
     const { data, error } = await supabase!
       .from('initiatives')
-      .select('*')
+      .select(`
+        *,
+        owner:users!owner_id(id, name, email, role, skills, location, weekly_capacity_hrs, avatar_url),
+        initiative_team_members(user_id, committed_hours)
+      `)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
     
-    // Fetch owner data and team members for each initiative
-    const initiativesWithOwners = await Promise.all(
-      data.map(async (initiative) => {
-        const { data: ownerData } = await supabase!
-          .from('users')
-          .select('*')
-          .eq('id', initiative.owner_id)
-          .single();
-        
-        // Fetch team members for this initiative
-        const { data: teamMembersData } = await supabase!
-          .from('initiative_team_members')
-          .select('user_id, committed_hours')
-          .eq('initiative_id', initiative.id);
-        
-        return {
-          id: initiative.id,
-          title: initiative.title,
-          description: initiative.description,
-          ownerId: initiative.owner_id,
-          teamMembers: teamMembersData ? teamMembersData.map(member => ({
-            userId: member.user_id,
-            committedHours: member.committed_hours
-          })) : [],
-          status: initiative.status,
-          startDate: initiative.start_date,
-          endDate: initiative.end_date,
-          skillsNeeded: initiative.skills_needed || [],
-          locations: initiative.locations || [],
-          tags: initiative.tags || [],
-          coverImageUrl: initiative.cover_image_url,
-          owner: ownerData ? {
-            id: ownerData.id,
-            name: ownerData.name,
-            email: ownerData.email,
-            role: ownerData.role,
-            skills: ownerData.skills || [],
-            location: ownerData.location,
-            weeklyCapacityHrs: ownerData.weekly_capacity_hrs,
-            avatarUrl: ownerData.avatar_url
-          } : null
-        };
-      })
-    );
-    
-    return initiativesWithOwners;
+    return (data || []).map((row: {
+      id: string;
+      title: string;
+      description: string | null;
+      owner_id: string;
+      status: string;
+      start_date: string | null;
+      end_date: string | null;
+      skills_needed: string[] | null;
+      locations: string[] | null;
+      tags: string[] | null;
+      cover_image_url: string | null;
+      owner: { id: string; name: string; email: string; username: string; role: string; skills: string[]; location: string; weekly_capacity_hrs: number; avatar_url: string | null } | null;
+      initiative_team_members: { user_id: string; committed_hours: number }[] | null;
+    }) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description ?? '',
+      ownerId: row.owner_id,
+      teamMembers: (row.initiative_team_members || []).map(m => ({ userId: m.user_id, committedHours: m.committed_hours })),
+      status: row.status as InitiativeStatus,
+      startDate: row.start_date ?? '',
+      endDate: row.end_date ?? undefined,
+      skillsNeeded: row.skills_needed || [],
+      locations: row.locations || [],
+      tags: row.tags || [],
+      coverImageUrl: row.cover_image_url ?? '',
+      owner: row.owner ? {
+        id: row.owner.id,
+        name: row.owner.name,
+        email: row.owner.email,
+        username: row.owner.username,
+        role: row.owner.role as User['role'],
+        skills: row.owner.skills || [],
+        location: row.owner.location,
+        weeklyCapacityHrs: row.owner.weekly_capacity_hrs,
+        avatarUrl: row.owner.avatar_url ?? ''
+      } : undefined
+    }));
   } catch (error) {
     console.error('Error fetching initiatives:', error);
     return [];
@@ -236,23 +241,24 @@ export const getInitiativeById = async (id: string): Promise<Initiative | null> 
         userId: member.user_id,
         committedHours: member.committed_hours
       })) : [],
-      status: data.status,
+      status: data.status as InitiativeStatus,
       startDate: data.start_date,
       endDate: data.end_date,
       skillsNeeded: data.skills_needed || [],
       locations: data.locations || [],
       tags: data.tags || [],
-      coverImageUrl: data.cover_image_url,
+      coverImageUrl: data.cover_image_url ?? '',
       owner: ownerData ? {
         id: ownerData.id,
         name: ownerData.name,
         email: ownerData.email,
-        role: ownerData.role,
+        username: ownerData.username,
+        role: ownerData.role as User['role'],
         skills: ownerData.skills || [],
         location: ownerData.location,
         weeklyCapacityHrs: ownerData.weekly_capacity_hrs,
-        avatarUrl: ownerData.avatar_url
-      } : null
+        avatarUrl: ownerData.avatar_url ?? ''
+      } : undefined
     };
   } catch (error) {
     console.error('Error fetching initiative:', error);
@@ -268,7 +274,7 @@ export const createInitiative = async (initiative: Omit<Initiative, 'id'>): Prom
       .from('initiatives')
       .insert({
         id: `init-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        owner_id: initiative.owner.id,
+        owner_id: initiative.owner!.id,
         title: initiative.title,
         description: initiative.description,
         status: initiative.status,
@@ -316,23 +322,24 @@ export const createInitiative = async (initiative: Omit<Initiative, 'id'>): Prom
         userId: data.owner_id,
         committedHours: defaultCommittedHours
       }], // Owner is automatically a team member
-      status: data.status,
+      status: data.status as InitiativeStatus,
       startDate: data.start_date,
       endDate: data.end_date,
       skillsNeeded: data.skills_needed || [],
       locations: data.locations || [],
       tags: data.tags || [],
-      coverImageUrl: data.cover_image_url,
+      coverImageUrl: data.cover_image_url ?? '',
       owner: ownerData ? {
         id: ownerData.id,
         name: ownerData.name,
         email: ownerData.email,
-        role: ownerData.role,
+        username: ownerData.username,
+        role: ownerData.role as User['role'],
         skills: ownerData.skills || [],
         location: ownerData.location,
         weeklyCapacityHrs: ownerData.weekly_capacity_hrs,
-        avatarUrl: ownerData.avatar_url
-      } : null
+        avatarUrl: ownerData.avatar_url ?? ''
+      } : undefined
     };
   } catch (error) {
     console.error('Error creating initiative:', error);
@@ -344,24 +351,26 @@ export const updateInitiative = async (id: string, updates: Partial<Initiative>)
   if (!isDatabaseAvailable()) return null;
   
   try {
+    const row: Record<string, unknown> = pickDefined({
+      title: updates.title,
+      description: updates.description,
+      status: updates.status,
+      start_date: updates.startDate,
+      end_date: updates.endDate,
+      skills_needed: updates.skillsNeeded,
+      locations: updates.locations,
+      tags: updates.tags,
+      cover_image_url: updates.coverImageUrl,
+    });
+    row.updated_at = new Date().toISOString();
+
     const { data, error } = await supabase!
       .from('initiatives')
-      .update({
-        title: updates.title,
-        description: updates.description,
-        status: updates.status,
-        start_date: updates.startDate,
-        end_date: updates.endDate,
-        skills_needed: updates.skillsNeeded,
-        locations: updates.locations,
-        tags: updates.tags,
-        cover_image_url: updates.coverImageUrl,
-        updated_at: new Date().toISOString()
-      })
+      .update(row)
       .eq('id', id)
       .select('*')
       .single();
-    
+
     if (error) throw error;
     
     // Fetch owner data
@@ -408,23 +417,24 @@ export const updateInitiative = async (id: string, updates: Partial<Initiative>)
         userId: member.user_id,
         committedHours: member.committed_hours
       })) : [],
-      status: data.status,
+      status: data.status as InitiativeStatus,
       startDate: data.start_date,
       endDate: data.end_date,
       skillsNeeded: data.skills_needed || [],
       locations: data.locations || [],
       tags: data.tags || [],
-      coverImageUrl: data.cover_image_url,
+      coverImageUrl: data.cover_image_url ?? '',
       owner: ownerData ? {
         id: ownerData.id,
         name: ownerData.name,
         email: ownerData.email,
-        role: ownerData.role,
+        username: ownerData.username,
+        role: ownerData.role as User['role'],
         skills: ownerData.skills || [],
         location: ownerData.location,
         weeklyCapacityHrs: ownerData.weekly_capacity_hrs,
-        avatarUrl: ownerData.avatar_url
-      } : null
+        avatarUrl: ownerData.avatar_url ?? ''
+      } : undefined
     };
   } catch (error) {
     console.error('Error updating initiative:', error);
@@ -445,6 +455,28 @@ export const deleteInitiative = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error('Error deleting initiative:', error);
+    return false;
+  }
+};
+
+export const addTeamMember = async (
+  initiativeId: string,
+  userId: string,
+  committedHours: number
+): Promise<boolean> => {
+  if (!isDatabaseAvailable()) return false;
+  try {
+    const { error } = await supabase!
+      .from('initiative_team_members')
+      .insert({
+        initiative_id: initiativeId,
+        user_id: userId,
+        committed_hours: committedHours
+      });
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error adding team member:', error);
     return false;
   }
 };
@@ -471,6 +503,8 @@ export const getAllHelpWanted = async (): Promise<HelpWanted[]> => {
       status: post.status,
       initiative: {
         id: post.initiative.id,
+        ownerId: post.initiative.owner_id,
+        teamMembers: [],
         title: post.initiative.title,
         description: post.initiative.description,
         status: post.initiative.status,
@@ -479,18 +513,19 @@ export const getAllHelpWanted = async (): Promise<HelpWanted[]> => {
         skillsNeeded: post.initiative.skills_needed || [],
         locations: post.initiative.locations || [],
         tags: post.initiative.tags || [],
-        coverImageUrl: post.initiative.cover_image_url,
+        coverImageUrl: post.initiative.cover_image_url ?? '',
         owner: {
           id: '',
           name: '',
           email: '',
+          username: '',
           role: 'Developer',
           skills: [],
           location: '',
           weeklyCapacityHrs: 40,
           avatarUrl: ''
         }
-      }
+      } as Initiative
     }));
   } catch (error) {
     console.error('Error fetching help wanted posts:', error);
@@ -527,6 +562,8 @@ export const createHelpWanted = async (post: Omit<HelpWanted, 'id'>): Promise<He
       status: data.status,
       initiative: {
         id: data.initiative.id,
+        ownerId: data.initiative.owner_id,
+        teamMembers: [],
         title: data.initiative.title,
         description: data.initiative.description,
         status: data.initiative.status,
@@ -535,18 +572,19 @@ export const createHelpWanted = async (post: Omit<HelpWanted, 'id'>): Promise<He
         skillsNeeded: data.initiative.skills_needed || [],
         locations: data.initiative.locations || [],
         tags: data.initiative.tags || [],
-        coverImageUrl: data.initiative.cover_image_url,
+        coverImageUrl: data.initiative.cover_image_url ?? '',
         owner: {
           id: '',
           name: '',
           email: '',
+          username: '',
           role: 'Developer',
           skills: [],
           location: '',
           weeklyCapacityHrs: 40,
           avatarUrl: ''
         }
-      }
+      } as Initiative
     };
   } catch (error) {
     console.error('Error creating help wanted post:', error);
@@ -554,18 +592,24 @@ export const createHelpWanted = async (post: Omit<HelpWanted, 'id'>): Promise<He
   }
 };
 
-export const updateHelpWanted = async (id: string, updates: Partial<HelpWanted>): Promise<HelpWanted | null> => {
+export const updateHelpWanted = async (
+  id: string,
+  updates: Partial<Omit<HelpWanted, 'id' | 'initiativeId'>>
+): Promise<HelpWanted | null> => {
   if (!isDatabaseAvailable()) return null;
   
   try {
+    const row: Record<string, unknown> = pickDefined({
+      skill: updates.skill,
+      hours_per_week: updates.hoursPerWeek,
+      status: updates.status,
+    });
+    if (Object.keys(row).length === 0) return null;
+    row.updated_at = new Date().toISOString();
+
     const { data, error } = await supabase!
       .from('help_wanted')
-      .update({
-        skill: updates.skill,
-        hours_per_week: updates.hoursPerWeek,
-        status: updates.status,
-        updated_at: new Date().toISOString()
-      })
+      .update(row)
       .eq('id', id)
       .select(`
         *,
@@ -582,6 +626,8 @@ export const updateHelpWanted = async (id: string, updates: Partial<HelpWanted>)
       status: data.status,
       initiative: {
         id: data.initiative.id,
+        ownerId: data.initiative.owner_id,
+        teamMembers: [],
         title: data.initiative.title,
         description: data.initiative.description,
         status: data.initiative.status,
@@ -590,18 +636,19 @@ export const updateHelpWanted = async (id: string, updates: Partial<HelpWanted>)
         skillsNeeded: data.initiative.skills_needed || [],
         locations: data.initiative.locations || [],
         tags: data.initiative.tags || [],
-        coverImageUrl: data.initiative.cover_image_url,
+        coverImageUrl: data.initiative.cover_image_url ?? '',
         owner: {
           id: '',
           name: '',
           email: '',
+          username: '',
           role: 'Developer',
           skills: [],
           location: '',
           weeklyCapacityHrs: 40,
           avatarUrl: ''
         }
-      }
+      } as Initiative
     };
   } catch (error) {
     console.error('Error updating help wanted post:', error);
@@ -652,14 +699,17 @@ export const getAllJoinRequests = async (): Promise<JoinRequest[]> => {
         id: request.user.id,
         name: request.user.name,
         email: request.user.email,
+        username: request.user.username,
         role: request.user.role,
         skills: request.user.skills || [],
         location: request.user.location,
         weeklyCapacityHrs: request.user.weekly_capacity_hrs,
-        avatarUrl: request.user.avatar_url
+        avatarUrl: request.user.avatar_url ?? ''
       },
       initiative: {
         id: request.initiative.id,
+        ownerId: request.initiative.owner_id,
+        teamMembers: [],
         title: request.initiative.title,
         description: request.initiative.description,
         status: request.initiative.status,
@@ -668,18 +718,19 @@ export const getAllJoinRequests = async (): Promise<JoinRequest[]> => {
         skillsNeeded: request.initiative.skills_needed || [],
         locations: request.initiative.locations || [],
         tags: request.initiative.tags || [],
-        coverImageUrl: request.initiative.cover_image_url,
+        coverImageUrl: request.initiative.cover_image_url ?? '',
         owner: {
           id: '',
           name: '',
           email: '',
+          username: '',
           role: 'Developer',
           skills: [],
           location: '',
           weeklyCapacityHrs: 40,
           avatarUrl: ''
         }
-      }
+      } as Initiative
     }));
   } catch (error) {
     console.error('Error fetching join requests:', error);
@@ -713,14 +764,17 @@ export const getJoinRequestsForInitiative = async (initiativeId: string): Promis
         id: request.user.id,
         name: request.user.name,
         email: request.user.email,
+        username: request.user.username,
         role: request.user.role,
         skills: request.user.skills || [],
         location: request.user.location,
         weeklyCapacityHrs: request.user.weekly_capacity_hrs,
-        avatarUrl: request.user.avatar_url
+        avatarUrl: request.user.avatar_url ?? ''
       },
       initiative: {
         id: request.initiative.id,
+        ownerId: request.initiative.owner_id,
+        teamMembers: [],
         title: request.initiative.title,
         description: request.initiative.description,
         status: request.initiative.status,
@@ -729,18 +783,19 @@ export const getJoinRequestsForInitiative = async (initiativeId: string): Promis
         skillsNeeded: request.initiative.skills_needed || [],
         locations: request.initiative.locations || [],
         tags: request.initiative.tags || [],
-        coverImageUrl: request.initiative.cover_image_url,
+        coverImageUrl: request.initiative.cover_image_url ?? '',
         owner: {
           id: '',
           name: '',
           email: '',
+          username: '',
           role: 'Developer',
           skills: [],
           location: '',
           weeklyCapacityHrs: 40,
           avatarUrl: ''
         }
-      }
+      } as Initiative
     }));
   } catch (error) {
     console.error('Error fetching join requests for initiative:', error);
@@ -781,14 +836,17 @@ export const createJoinRequest = async (request: Omit<JoinRequest, 'id' | 'creat
         id: data.user.id,
         name: data.user.name,
         email: data.user.email,
+        username: data.user.username,
         role: data.user.role,
         skills: data.user.skills || [],
         location: data.user.location,
         weeklyCapacityHrs: data.user.weekly_capacity_hrs,
-        avatarUrl: data.user.avatar_url
+        avatarUrl: data.user.avatar_url ?? ''
       },
       initiative: {
         id: data.initiative.id,
+        ownerId: data.initiative.owner_id,
+        teamMembers: [],
         title: data.initiative.title,
         description: data.initiative.description,
         status: data.initiative.status,
@@ -797,18 +855,19 @@ export const createJoinRequest = async (request: Omit<JoinRequest, 'id' | 'creat
         skillsNeeded: data.initiative.skills_needed || [],
         locations: data.initiative.locations || [],
         tags: data.initiative.tags || [],
-        coverImageUrl: data.initiative.cover_image_url,
+        coverImageUrl: data.initiative.cover_image_url ?? '',
         owner: {
           id: '',
           name: '',
           email: '',
+          username: '',
           role: 'Developer',
           skills: [],
           location: '',
           weeklyCapacityHrs: 40,
           avatarUrl: ''
         }
-      }
+      } as Initiative
     };
   } catch (error) {
     console.error('Error creating join request:', error);
@@ -846,14 +905,17 @@ export const updateJoinRequest = async (id: string, status: string): Promise<Joi
         id: data.user.id,
         name: data.user.name,
         email: data.user.email,
+        username: data.user.username,
         role: data.user.role,
         skills: data.user.skills || [],
         location: data.user.location,
         weeklyCapacityHrs: data.user.weekly_capacity_hrs,
-        avatarUrl: data.user.avatar_url
+        avatarUrl: data.user.avatar_url ?? ''
       },
       initiative: {
         id: data.initiative.id,
+        ownerId: data.initiative.owner_id,
+        teamMembers: [],
         title: data.initiative.title,
         description: data.initiative.description,
         status: data.initiative.status,
@@ -862,18 +924,19 @@ export const updateJoinRequest = async (id: string, status: string): Promise<Joi
         skillsNeeded: data.initiative.skills_needed || [],
         locations: data.initiative.locations || [],
         tags: data.initiative.tags || [],
-        coverImageUrl: data.initiative.cover_image_url,
+        coverImageUrl: data.initiative.cover_image_url ?? '',
         owner: {
           id: '',
           name: '',
           email: '',
+          username: '',
           role: 'Developer',
           skills: [],
           location: '',
           weeklyCapacityHrs: 40,
           avatarUrl: ''
         }
-      }
+      } as Initiative
     };
   } catch (error) {
     console.error('Error updating join request:', error);
@@ -919,20 +982,23 @@ export const getAllTasks = async (): Promise<Task[]> => {
       title: task.title,
       description: task.description,
       status: task.status,
-      assignedTo: task.assigned_to,
+      assigneeId: task.assigned_to,
       createdAt: task.created_at,
       user: task.user ? {
         id: task.user.id,
         name: task.user.name,
         email: task.user.email,
+        username: task.user.username,
         role: task.user.role,
         skills: task.user.skills || [],
         location: task.user.location,
         weeklyCapacityHrs: task.user.weekly_capacity_hrs,
-        avatarUrl: task.user.avatar_url
+        avatarUrl: task.user.avatar_url ?? ''
       } : undefined,
       initiative: {
         id: task.initiative.id,
+        ownerId: task.initiative.owner_id,
+        teamMembers: [],
         title: task.initiative.title,
         description: task.initiative.description,
         status: task.initiative.status,
@@ -941,18 +1007,19 @@ export const getAllTasks = async (): Promise<Task[]> => {
         skillsNeeded: task.initiative.skills_needed || [],
         locations: task.initiative.locations || [],
         tags: task.initiative.tags || [],
-        coverImageUrl: task.initiative.cover_image_url,
+        coverImageUrl: task.initiative.cover_image_url ?? '',
         owner: {
           id: '',
           name: '',
           email: '',
+          username: '',
           role: 'Developer',
           skills: [],
           location: '',
           weeklyCapacityHrs: 40,
           avatarUrl: ''
         }
-      }
+      } as Initiative
     }));
   } catch (error) {
     console.error('Error fetching tasks:', error);
@@ -972,7 +1039,7 @@ export const createTask = async (task: Omit<Task, 'id' | 'createdAt'>): Promise<
         title: task.title,
         description: task.description,
         status: task.status,
-        assigned_to: task.assignedTo,
+        assigned_to: task.assigneeId,
         created_at: new Date().toISOString()
       })
       .select(`
@@ -989,20 +1056,23 @@ export const createTask = async (task: Omit<Task, 'id' | 'createdAt'>): Promise<
       title: data.title,
       description: data.description,
       status: data.status,
-      assignedTo: data.assigned_to,
+      assigneeId: data.assigned_to,
       createdAt: data.created_at,
       user: data.user ? {
         id: data.user.id,
         name: data.user.name,
         email: data.user.email,
+        username: data.user.username,
         role: data.user.role,
         skills: data.user.skills || [],
         location: data.user.location,
         weeklyCapacityHrs: data.user.weekly_capacity_hrs,
-        avatarUrl: data.user.avatar_url
+        avatarUrl: data.user.avatar_url ?? ''
       } : undefined,
       initiative: {
         id: data.initiative.id,
+        ownerId: data.initiative.owner_id,
+        teamMembers: [],
         title: data.initiative.title,
         description: data.initiative.description,
         status: data.initiative.status,
@@ -1011,18 +1081,19 @@ export const createTask = async (task: Omit<Task, 'id' | 'createdAt'>): Promise<
         skillsNeeded: data.initiative.skills_needed || [],
         locations: data.initiative.locations || [],
         tags: data.initiative.tags || [],
-        coverImageUrl: data.initiative.cover_image_url,
+        coverImageUrl: data.initiative.cover_image_url ?? '',
         owner: {
           id: '',
           name: '',
           email: '',
+          username: '',
           role: 'Developer',
           skills: [],
           location: '',
           weeklyCapacityHrs: 40,
           avatarUrl: ''
         }
-      }
+      } as Initiative
     };
   } catch (error) {
     console.error('Error creating task:', error);
@@ -1034,15 +1105,18 @@ export const updateTask = async (id: string, updates: Partial<Task>): Promise<Ta
   if (!isDatabaseAvailable()) return null;
   
   try {
+    const row: Record<string, unknown> = pickDefined({
+      title: updates.title,
+      description: updates.description,
+      status: updates.status,
+      assigned_to: updates.assigneeId,
+    });
+    if (Object.keys(row).length === 0) return null;
+    row.updated_at = new Date().toISOString();
+
     const { data, error } = await supabase!
       .from('tasks')
-      .update({
-        title: updates.title,
-        description: updates.description,
-        status: updates.status,
-        assigned_to: updates.assignedTo,
-        updated_at: new Date().toISOString()
-      })
+      .update(row)
       .eq('id', id)
       .select(`
         *,
@@ -1058,20 +1132,23 @@ export const updateTask = async (id: string, updates: Partial<Task>): Promise<Ta
       title: data.title,
       description: data.description,
       status: data.status,
-      assignedTo: data.assigned_to,
+      assigneeId: data.assigned_to,
       createdAt: data.created_at,
       user: data.user ? {
         id: data.user.id,
         name: data.user.name,
         email: data.user.email,
+        username: data.user.username,
         role: data.user.role,
         skills: data.user.skills || [],
         location: data.user.location,
         weeklyCapacityHrs: data.user.weekly_capacity_hrs,
-        avatarUrl: data.user.avatar_url
+        avatarUrl: data.user.avatar_url ?? ''
       } : undefined,
       initiative: {
         id: data.initiative.id,
+        ownerId: data.initiative.owner_id,
+        teamMembers: [],
         title: data.initiative.title,
         description: data.initiative.description,
         status: data.initiative.status,
@@ -1080,18 +1157,19 @@ export const updateTask = async (id: string, updates: Partial<Task>): Promise<Ta
         skillsNeeded: data.initiative.skills_needed || [],
         locations: data.initiative.locations || [],
         tags: data.initiative.tags || [],
-        coverImageUrl: data.initiative.cover_image_url,
+        coverImageUrl: data.initiative.cover_image_url ?? '',
         owner: {
           id: '',
           name: '',
           email: '',
+          username: '',
           role: 'Developer',
           skills: [],
           location: '',
           weeklyCapacityHrs: 40,
           avatarUrl: ''
         }
-      }
+      } as Initiative
     };
   } catch (error) {
     console.error('Error updating task:', error);
@@ -1128,14 +1206,15 @@ export const getNotificationsForUser = async (userId: string): Promise<Notificat
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data.map(notification => ({
+    return data.map((notification: { id: string; user_id: string; type: string; message: string; is_read: boolean; created_at: string; initiative_id?: string | null }) => ({
       id: notification.id,
       userId: notification.user_id,
-      type: notification.type,
-      title: notification.title,
+      type: notification.type as NotificationType,
       message: notification.message,
       isRead: notification.is_read,
-      createdAt: notification.created_at
+      createdAt: notification.created_at,
+      initiativeId: notification.initiative_id ?? '',
+      link: notification.initiative_id ? { initiativeId: notification.initiative_id } : { initiativeId: '' },
     }));
   } catch (error) {
     console.error('Error fetching notifications:', error);
@@ -1147,16 +1226,18 @@ export const createNotification = async (notification: Omit<Notification, 'id' |
   if (!isDatabaseAvailable()) return null;
   
   try {
+    const title = (notification as { title?: string }).title ?? notification.type;
     const { data, error } = await supabase!
       .from('notifications')
       .insert({
         id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         user_id: notification.userId,
         type: notification.type,
-        title: notification.title,
+        title,
         message: notification.message,
         is_read: notification.isRead,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        ...(notification.initiativeId && { initiative_id: notification.initiativeId }),
       })
       .select()
       .single();
@@ -1166,10 +1247,11 @@ export const createNotification = async (notification: Omit<Notification, 'id' |
       id: data.id,
       userId: data.user_id,
       type: data.type,
-      title: data.title,
       message: data.message,
       isRead: data.is_read,
-      createdAt: data.created_at
+      createdAt: data.created_at,
+      initiativeId: data.initiative_id ?? '',
+      link: data.initiative_id ? { initiativeId: data.initiative_id } : { initiativeId: '' },
     };
   } catch (error) {
     console.error('Error creating notification:', error);

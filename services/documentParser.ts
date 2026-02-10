@@ -55,36 +55,36 @@ export const extractTextFromFile = async (file: File): Promise<string> => {
     
     reader.onload = async (event) => {
       try {
-        const content = event.target?.result as string;
+        const content = event.target?.result as string | ArrayBuffer;
         let extractedText = '';
         
         switch (file.type) {
           case 'text/plain':
           case 'text/csv':
-            extractedText = content;
+            extractedText = typeof content === 'string' ? content : new TextDecoder().decode(content);
             break;
             
           case 'application/pdf':
             // For PDF, we'll use a simple approach - in a real app, you'd use a PDF parser library
-            extractedText = await extractTextFromPDF(content);
+            extractedText = await extractTextFromPDF(content instanceof ArrayBuffer ? content : new TextEncoder().encode(content as string).buffer);
             break;
             
           case 'application/msword':
           case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
             // For Word documents, we'll use a simple approach
-            extractedText = await extractTextFromWord(content);
+            extractedText = await extractTextFromWord(content instanceof ArrayBuffer ? content : new TextEncoder().encode(content as string).buffer);
             break;
             
           case 'application/vnd.ms-powerpoint':
           case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
             // For PowerPoint, we'll use a simple approach
-            extractedText = await extractTextFromPowerPoint(content);
+            extractedText = await extractTextFromPowerPoint(content instanceof ArrayBuffer ? content : new TextEncoder().encode(content as string).buffer);
             break;
             
           case 'application/vnd.ms-excel':
           case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
             // For Excel, we'll use a simple approach
-            extractedText = await extractTextFromExcel(content);
+            extractedText = await extractTextFromExcel(content instanceof ArrayBuffer ? content : new TextEncoder().encode(content as string).buffer);
             break;
             
           default:

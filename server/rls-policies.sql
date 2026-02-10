@@ -7,187 +7,162 @@ ALTER TABLE join_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
+-- Helper: public.users.id for the current auth user (Supabase Auth links via auth_user_id)
+-- All policies that check "is current user" use this pattern instead of auth.uid()::text = id.
+
 -- Users table policies
--- Users can read all users (for team member selection, etc.)
 CREATE POLICY "Users can read all users" ON users
   FOR SELECT USING (true);
 
--- Users can update their own profile
 CREATE POLICY "Users can update own profile" ON users
-  FOR UPDATE USING (auth.uid()::text = id);
+  FOR UPDATE USING (auth.uid() = auth_user_id);
 
--- Only admins can insert new users (registration handled by functions)
 CREATE POLICY "Only admins can insert users" ON users
   FOR INSERT WITH CHECK (false);
 
--- Only admins can delete users
 CREATE POLICY "Only admins can delete users" ON users
   FOR DELETE USING (false);
 
--- Initiatives table policies
--- Users can read all initiatives
+-- Initiatives: owner_id is public.users.id; current user is owner iff that user's auth_user_id = auth.uid()
 CREATE POLICY "Users can read all initiatives" ON initiatives
   FOR SELECT USING (true);
 
--- Users can create initiatives
 CREATE POLICY "Users can create initiatives" ON initiatives
-  FOR INSERT WITH CHECK (auth.uid()::text = owner_id);
+  FOR INSERT WITH CHECK (owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()));
 
--- Users can update initiatives they own
 CREATE POLICY "Users can update own initiatives" ON initiatives
-  FOR UPDATE USING (auth.uid()::text = owner_id);
+  FOR UPDATE USING (owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()));
 
--- Users can delete initiatives they own
 CREATE POLICY "Users can delete own initiatives" ON initiatives
-  FOR DELETE USING (auth.uid()::text = owner_id);
+  FOR DELETE USING (owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()));
 
--- Help wanted table policies
--- Users can read all help wanted posts
+-- Help wanted: allow if initiative owner is current user
 CREATE POLICY "Users can read all help wanted" ON help_wanted
   FOR SELECT USING (true);
 
--- Users can create help wanted posts for initiatives they own
 CREATE POLICY "Users can create help wanted for own initiatives" ON help_wanted
   FOR INSERT WITH CHECK (
     EXISTS (
-      SELECT 1 FROM initiatives 
-      WHERE id = initiative_id AND owner_id = auth.uid()::text
+      SELECT 1 FROM initiatives i
+      WHERE i.id = initiative_id AND i.owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 
--- Users can update help wanted posts for initiatives they own
 CREATE POLICY "Users can update help wanted for own initiatives" ON help_wanted
   FOR UPDATE USING (
     EXISTS (
-      SELECT 1 FROM initiatives 
-      WHERE id = initiative_id AND owner_id = auth.uid()::text
+      SELECT 1 FROM initiatives i
+      WHERE i.id = initiative_id AND i.owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 
--- Users can delete help wanted posts for initiatives they own
 CREATE POLICY "Users can delete help wanted for own initiatives" ON help_wanted
   FOR DELETE USING (
     EXISTS (
-      SELECT 1 FROM initiatives 
-      WHERE id = initiative_id AND owner_id = auth.uid()::text
+      SELECT 1 FROM initiatives i
+      WHERE i.id = initiative_id AND i.owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 
--- Initiative team members table policies
--- Users can read all team members
+-- Initiative team members: user_id is public.users.id
 CREATE POLICY "Users can read all team members" ON initiative_team_members
   FOR SELECT USING (true);
 
--- Users can join initiatives (insert themselves)
 CREATE POLICY "Users can join initiatives" ON initiative_team_members
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  FOR INSERT WITH CHECK (user_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()));
 
--- Users can leave initiatives (delete themselves)
 CREATE POLICY "Users can leave initiatives" ON initiative_team_members
-  FOR DELETE USING (auth.uid()::text = user_id);
+  FOR DELETE USING (user_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()));
 
--- Initiative owners can manage team members
 CREATE POLICY "Initiative owners can manage team members" ON initiative_team_members
   FOR ALL USING (
     EXISTS (
-      SELECT 1 FROM initiatives 
-      WHERE id = initiative_id AND owner_id = auth.uid()::text
+      SELECT 1 FROM initiatives i
+      WHERE i.id = initiative_id AND i.owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 
--- Join requests table policies
--- Users can read join requests for initiatives they own or are involved in
+-- Join requests: user_id and initiative owner checks
 CREATE POLICY "Users can read relevant join requests" ON join_requests
   FOR SELECT USING (
-    auth.uid()::text = user_id OR
+    user_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()) OR
     EXISTS (
-      SELECT 1 FROM initiatives 
-      WHERE id = initiative_id AND owner_id = auth.uid()::text
+      SELECT 1 FROM initiatives i
+      WHERE i.id = initiative_id AND i.owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     ) OR
     EXISTS (
-      SELECT 1 FROM initiative_team_members 
-      WHERE initiative_id = join_requests.initiative_id AND user_id = auth.uid()::text
+      SELECT 1 FROM initiative_team_members itm
+      WHERE itm.initiative_id = join_requests.initiative_id AND itm.user_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 
--- Users can create join requests
 CREATE POLICY "Users can create join requests" ON join_requests
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  FOR INSERT WITH CHECK (user_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()));
 
--- Initiative owners can update join requests for their initiatives
 CREATE POLICY "Initiative owners can update join requests" ON join_requests
   FOR UPDATE USING (
     EXISTS (
-      SELECT 1 FROM initiatives 
-      WHERE id = initiative_id AND owner_id = auth.uid()::text
+      SELECT 1 FROM initiatives i
+      WHERE i.id = initiative_id AND i.owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 
--- Initiative owners can delete join requests for their initiatives
 CREATE POLICY "Initiative owners can delete join requests" ON join_requests
   FOR DELETE USING (
     EXISTS (
-      SELECT 1 FROM initiatives 
-      WHERE id = initiative_id AND owner_id = auth.uid()::text
+      SELECT 1 FROM initiatives i
+      WHERE i.id = initiative_id AND i.owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 
--- Tasks table policies
--- Users can read tasks for initiatives they're involved in
+-- Tasks: owner and assignee checks via public.users.id
 CREATE POLICY "Users can read relevant tasks" ON tasks
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM initiatives 
-      WHERE id = initiative_id AND owner_id = auth.uid()::text
+      SELECT 1 FROM initiatives i
+      WHERE i.id = initiative_id AND i.owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     ) OR
     EXISTS (
-      SELECT 1 FROM initiative_team_members 
-      WHERE initiative_id = tasks.initiative_id AND user_id = auth.uid()::text
+      SELECT 1 FROM initiative_team_members itm
+      WHERE itm.initiative_id = tasks.initiative_id AND itm.user_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     ) OR
-    assigned_to = auth.uid()::text
+    assigned_to = (SELECT id FROM users WHERE auth_user_id = auth.uid())
   );
 
--- Initiative owners can create tasks
 CREATE POLICY "Initiative owners can create tasks" ON tasks
   FOR INSERT WITH CHECK (
     EXISTS (
-      SELECT 1 FROM initiatives 
-      WHERE id = initiative_id AND owner_id = auth.uid()::text
+      SELECT 1 FROM initiatives i
+      WHERE i.id = initiative_id AND i.owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 
--- Initiative owners and assigned users can update tasks
 CREATE POLICY "Initiative owners and assignees can update tasks" ON tasks
   FOR UPDATE USING (
     EXISTS (
-      SELECT 1 FROM initiatives 
-      WHERE id = initiative_id AND owner_id = auth.uid()::text
+      SELECT 1 FROM initiatives i
+      WHERE i.id = initiative_id AND i.owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     ) OR
-    assigned_to = auth.uid()::text
+    assigned_to = (SELECT id FROM users WHERE auth_user_id = auth.uid())
   );
 
--- Initiative owners can delete tasks
 CREATE POLICY "Initiative owners can delete tasks" ON tasks
   FOR DELETE USING (
     EXISTS (
-      SELECT 1 FROM initiatives 
-      WHERE id = initiative_id AND owner_id = auth.uid()::text
+      SELECT 1 FROM initiatives i
+      WHERE i.id = initiative_id AND i.owner_id = (SELECT id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 
--- Notifications table policies
--- Users can read their own notifications
+-- Notifications: user_id is public.users.id
 CREATE POLICY "Users can read own notifications" ON notifications
-  FOR SELECT USING (auth.uid()::text = user_id);
+  FOR SELECT USING (user_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()));
 
--- System can create notifications (handled by functions)
 CREATE POLICY "System can create notifications" ON notifications
   FOR INSERT WITH CHECK (true);
 
--- Users can update their own notifications (mark as read)
 CREATE POLICY "Users can update own notifications" ON notifications
-  FOR UPDATE USING (auth.uid()::text = user_id);
+  FOR UPDATE USING (user_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()));
 
--- Users can delete their own notifications
 CREATE POLICY "Users can delete own notifications" ON notifications
-  FOR DELETE USING (auth.uid()::text = user_id);
+  FOR DELETE USING (user_id = (SELECT id FROM users WHERE auth_user_id = auth.uid()));

@@ -12,3 +12,19 @@ dist/
 
 # Local Netlify folder
 .netlify
+
+# Local and environment artifacts
+cookies.txt
+env-development.txt
+env-production.txt
+env-mcp.txt
+
+# Local docker/dev configs
+docker-compose.dev.yml
+
+# Ad-hoc test scripts
+test-*.js
+
+# Feedback system local storage (ephemeral on serverless)
+feedback-data.json
+feedback-screenshots/

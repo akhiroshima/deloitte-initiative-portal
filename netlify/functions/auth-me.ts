@@ -1,10 +1,12 @@
 import type { Handler } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
+import { withSecurity } from './_lib/security'
+import { parseCookies } from './_lib/cookies'
 
-export const handler: Handler = async (event) => {
+const authMeHandler: Handler = async (event) => {
   try {
     if (event.httpMethod !== 'GET') {
-      return { statusCode: 405, body: 'Method Not Allowed' }
+      return { statusCode: 405, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Method Not Allowed' }) }
     }
 
     // Parse cookies
@@ -14,14 +16,14 @@ export const handler: Handler = async (event) => {
     
     if (!accessToken) {
       console.log('No access token found in cookies');
-      return { statusCode: 401, body: JSON.stringify({ authenticated: false }) }
+      return { statusCode: 401, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ authenticated: false }) }
     }
 
     // Initialize Supabase client
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_ANON_KEY
     if (!supabaseUrl || !supabaseKey) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'Database not configured' }) }
+      return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Database not configured' }) }
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -31,7 +33,7 @@ export const handler: Handler = async (event) => {
     
     if (error || !user) {
       console.log('Invalid or expired session:', error?.message);
-      return { statusCode: 401, body: JSON.stringify({ authenticated: false }) }
+      return { statusCode: 401, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ authenticated: false }) }
     }
 
     console.log('Session verified for:', user.email);
@@ -55,7 +57,7 @@ export const handler: Handler = async (event) => {
       // Return basic info from auth.users if custom table data not found
       return {
         statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' } as Record<string, string>,
         body: JSON.stringify({ 
           authenticated: true, 
           session,
@@ -97,21 +99,8 @@ export const handler: Handler = async (event) => {
     }
   } catch (e: any) {
     console.error('Auth check error:', e);
-    return { statusCode: 401, body: JSON.stringify({ authenticated: false, error: e.message }) }
+    return { statusCode: 401, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ authenticated: false, error: e.message }) }
   }
 }
 
-// Parse cookie header
-function parseCookies(header?: string): Record<string, string> {
-  const out: Record<string, string> = {}
-  if (!header) return out
-  header.split(';').forEach(part => {
-    const idx = part.indexOf('=')
-    if (idx > -1) {
-      const k = part.slice(0, idx).trim()
-      const v = decodeURIComponent(part.slice(idx + 1))
-      out[k] = v
-    }
-  })
-  return out
-}
+export const handler = withSecurity(authMeHandler);

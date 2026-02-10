@@ -4,15 +4,16 @@ import { createClient } from '@supabase/supabase-js'
 import { authRateLimit, createRateLimitResponse } from './_lib/rateLimit'
 import { withSecurity } from './_lib/security'
 
-const bodySchema = z.object({ 
-  username: z.string().min(2).max(50), 
+// Align with client utils/validation.ts VALIDATION constants
+const bodySchema = z.object({
+  username: z.string().min(2).max(50),
   name: z.string().min(2),
   role: z.enum(['Designer', 'Developer', 'Lead', 'Manager']),
   location: z.string().min(2),
-  skills: z.array(z.string()).min(1),
+  skills: z.array(z.string().max(50)).min(1).max(20),
   weeklyCapacityHrs: z.number().min(1).max(40),
-  password: z.string().min(8).optional() // Optional password, will be generated if not provided
-})
+  password: z.string().min(8).optional(),
+});
 
 const registerHandler: Handler = async (event) => {
   try {
@@ -46,11 +47,17 @@ const registerHandler: Handler = async (event) => {
       }
     }
 
-    // Initialize Supabase Admin client (needs service role key for admin operations)
+    // Initialize Supabase Admin client (service role key required for signUp)
     const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!supabaseUrl || !supabaseServiceKey) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'Database not configured' }) }
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'Database not configured',
+          hint: 'SUPABASE_SERVICE_ROLE_KEY is required for registration'
+        })
+      }
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)

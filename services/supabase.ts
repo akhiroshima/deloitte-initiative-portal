@@ -8,7 +8,7 @@ if (!supabaseUrl || !supabaseKey) {
   console.warn('Supabase credentials not found. Some features may not work.');
 }
 
-// Create Supabase client with auth persistence
+// Use createClient<Database>(...) with types from types/supabase.ts once generated via `npx supabase gen types typescript`
 export const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,

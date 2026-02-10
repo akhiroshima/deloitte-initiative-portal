@@ -1,172 +1,91 @@
-import { Handler } from '@netlify/functions';
-import { promises as fs } from 'fs';
-import path from 'path';
+import type { Handler } from '@netlify/functions';
+import { createClient } from '@supabase/supabase-js';
+import { withSecurity } from './_lib/security';
 
-interface FeedbackData {
-  id: string;
-  timestamp: string;
-  message: string;
-  screenshot: string | null;
-  screenshotPath?: string | null;
-  url: string;
-  userAgent: string;
-  viewport: {
-    width: number;
-    height: number;
-  };
-}
-
-interface FeedbackStorage {
-  feedbacks: FeedbackData[];
-  lastUpdated: string;
-}
-
-const FEEDBACK_FILE_PATH = path.join(process.cwd(), 'feedback-data.json');
-
-// Read existing feedback data
-const readFeedbackData = async (): Promise<FeedbackStorage | null> => {
-  try {
-    const data = await fs.readFile(FEEDBACK_FILE_PATH, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error reading feedback data:', error);
-    return null;
-  }
-};
-
-// Generate markdown report for Cursor
-const generateMarkdownReport = (storage: FeedbackStorage): string => {
-  const { feedbacks, lastUpdated } = storage;
-  
-  let markdown = `# Development Feedback Report\n\n`;
-  markdown += `**Generated:** ${new Date().toISOString()}\n`;
-  markdown += `**Last Updated:** ${lastUpdated}\n`;
-  markdown += `**Total Feedbacks:** ${feedbacks.length}\n\n`;
-  
-  if (feedbacks.length === 0) {
-    markdown += `No feedback has been submitted yet.\n`;
-    return markdown;
-  }
-  
-  // Group feedbacks by date
-  const feedbacksByDate = feedbacks.reduce((acc, feedback) => {
-    const date = new Date(feedback.timestamp).toDateString();
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(feedback);
-    return acc;
-  }, {} as Record<string, FeedbackData[]>);
-  
-  // Sort dates (most recent first)
-  const sortedDates = Object.keys(feedbacksByDate).sort((a, b) => 
-    new Date(b).getTime() - new Date(a).getTime()
-  );
-  
-  sortedDates.forEach(date => {
-    markdown += `## ${date}\n\n`;
-    
-    feedbacksByDate[date].forEach((feedback, index) => {
-      markdown += `### Feedback #${feedbacks.length - feedbacks.indexOf(feedback)}\n\n`;
-      markdown += `**Time:** ${new Date(feedback.timestamp).toLocaleTimeString()}\n`;
-      markdown += `**URL:** ${feedback.url}\n`;
-      markdown += `**Viewport:** ${feedback.viewport.width} × ${feedback.viewport.height}\n`;
-      markdown += `**User Agent:** ${feedback.userAgent}\n\n`;
-      
-      markdown += `**Message:**\n`;
-      markdown += `\`\`\`\n${feedback.message}\n\`\`\`\n\n`;
-      
-      if (feedback.screenshotPath) {
-        markdown += `**Screenshot:** Available at \`${feedback.screenshotPath}\`\n\n`;
-      }
-      
-      markdown += `---\n\n`;
-    });
-  });
-  
-  return markdown;
-};
-
-export const handler: Handler = async (event, context) => {
-  // Only allow GET requests
+const getHandler: Handler = async (event) => {
   if (event.httpMethod !== 'GET') {
     return {
       statusCode: 405,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ error: 'Method not allowed' }),
     };
   }
 
-  // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      },
-      body: '',
-    };
-  }
-
   try {
-    // Read feedback data
-    const storage = await readFeedbackData();
-    
-    if (!storage) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) {
       return {
-        statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'No feedback data found' }),
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Database not configured' }),
       };
     }
 
-    // Check if markdown format is requested
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const { data: rows, error } = await supabase
+      .from('feedback')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Feedback fetch error:', error);
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Failed to load feedback' }),
+      };
+    }
+
+    const feedbacks = (rows || []).map((r: { id: string; message: string; url: string | null; user_agent: string | null; viewport_width: number | null; viewport_height: number | null; screenshot_path: string | null; created_at: string }) => ({
+      id: r.id,
+      timestamp: r.created_at,
+      message: r.message,
+      url: r.url ?? '',
+      userAgent: r.user_agent ?? '',
+      viewport: { width: r.viewport_width ?? 0, height: r.viewport_height ?? 0 },
+      screenshotPath: r.screenshot_path,
+    }));
+
     const format = event.queryStringParameters?.format || 'json';
-    
     if (format === 'markdown') {
-      const markdown = generateMarkdownReport(storage);
-      
+      const markdown = [
+        '# Development Feedback Report',
+        '',
+        `**Generated:** ${new Date().toISOString()}`,
+        `**Total Feedbacks:** ${feedbacks.length}`,
+        '',
+        ...feedbacks.map(
+          (f: { id: string; timestamp: string; message: string; url: string; viewport: { width: number; height: number } }) =>
+            `## ${f.id}\n**Time:** ${f.timestamp}\n**URL:** ${f.url}\n**Viewport:** ${f.viewport.width} × ${f.viewport.height}\n\n${f.message}\n\n---\n`
+        ),
+      ].join('\n');
       return {
         statusCode: 200,
-        headers: {
-          'Content-Type': 'text/markdown',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: { 'Content-Type': 'text/markdown' },
         body: markdown,
       };
     }
 
-    // Return JSON format by default
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify(storage, null, 2),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        feedbacks,
+        lastUpdated: feedbacks[0]?.timestamp ?? new Date().toISOString(),
+      }),
     };
-
-  } catch (error) {
-    console.error('Error retrieving feedback:', error);
-    
+  } catch (e) {
+    console.error('Get feedback error:', e);
     return {
       statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ 
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: e instanceof Error ? e.message : 'Unknown error',
       }),
     };
   }
 };
+
+export const handler = withSecurity(getHandler);
