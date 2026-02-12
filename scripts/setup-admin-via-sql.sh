@@ -12,9 +12,13 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Development Supabase credentials
-SUPABASE_URL="https://khukxqhbzekvklfwbfsx.supabase.co"
-SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtodWt4cWhiemVrdmtsZndiZnN4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODY1ODY3NiwiZXhwIjoyMDc0MjM0Njc2fQ.ZEVKIQIapS3G67hv2sYhf8vb_5jl22DLmxmoWv8vzLc"
+# Supabase project (service role key must come from environment - never commit it)
+SUPABASE_URL="https://ifrakipwdjrphyhkfupv.supabase.co"
+if [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+  echo -e "${RED}ERROR: SUPABASE_SERVICE_ROLE_KEY is not set. Export it from your environment.${NC}"
+  exit 1
+fi
+SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY}"
 
 echo -e "${CYAN}🚀 Starting admin account setup via SQL...${NC}"
 echo -e "${YELLOW}⚠️  WARNING: This will DELETE ALL existing users!${NC}\n"
@@ -118,6 +122,5 @@ echo -e "\n${GREEN}✅ SUCCESS! Admin account created:${NC}"
 echo -e "${CYAN}   Username:  admin${NC}"
 echo -e "${CYAN}   Email:     admin@deloitte.com${NC}"
 echo -e "${CYAN}   Password:  admin1234${NC}"
-echo -e "\n${GREEN}🎉 You can now log in at:${NC}"
-echo -e "${CYAN}   https://deloitte-portal-dev.netlify.app${NC}\n"
+echo -e "\n${GREEN}🎉 You can now log in at your Netlify site URL (set in env as URL).${NC}\n"
 

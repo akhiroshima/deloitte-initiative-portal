@@ -177,10 +177,10 @@ async function setupAdminAccount() {
     log(`   Is Admin:  ${adminUser.is_admin}`, colors.cyan);
     log(`   User ID:   ${adminUser.id}`, colors.cyan);
 
-    log('\n🎉 Setup complete! You can now log in to the development site with:', colors.green);
+    log('\n🎉 Setup complete! You can now log in to the app with:', colors.green);
     log('   Username: admin', colors.magenta);
     log('   Password: admin1234', colors.magenta);
-    log('\n🌐 Development Site: https://deloitte-portal-dev.netlify.app', colors.cyan);
+    log('\n🌐 Set URL in Netlify env to your site (e.g. https://your-site.netlify.app)', colors.cyan);
 
   } catch (error) {
     log(`\n❌ ERROR: ${error instanceof Error ? error.message : String(error)}`, colors.red);

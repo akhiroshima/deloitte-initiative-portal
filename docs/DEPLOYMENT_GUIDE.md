@@ -1,11 +1,11 @@
 # Deployment & Environment Guide – Deloitte Initiative Portal
 
-This guide covers deployment to Netlify, environment setup (dev/prod), database (Supabase), and CI/CD.
+This guide covers deployment to Netlify, environment setup, database (Supabase), and CI/CD. The app uses a **single** Netlify site and a **single** Supabase project.
 
 ## Prerequisites
 
 - Netlify account
-- Supabase account
+- Supabase account (project ref: `ifrakipwdjrphyhkfupv`)
 - Groq API account (AI)
 - Hugging Face account (embeddings)
 - GitHub repository access
@@ -14,10 +14,10 @@ This guide covers deployment to Netlify, environment setup (dev/prod), database 
 
 ### Required (Netlify / local)
 
+Copy `env-template.txt` to `.env` (or `.env.local`) and set any missing values. The template includes the Supabase URL and anon key for the single project. You must add:
+
 ```bash
-# Supabase
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
+# Supabase (URL/anon in env-template.txt; add service role key for server-side only)
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # Auth
@@ -30,16 +30,43 @@ EMBEDDINGS_API_URL=https://api-inference.huggingface.co/models/sentence-transfor
 EMBEDDINGS_API_KEY=your-huggingface-token
 ```
 
-Set these in **Netlify → Site settings → Environment variables** (or use `netlify env:set` for local dev).
+Set these in **Netlify → Site settings → Environment variables** (and in `.env` for local dev). CORS uses `URL` or `NETLIFY_SITE_URL` as the allowed origin.
 
-## Database (Supabase)
+## Database setup (Supabase)
 
-1. Create a Supabase project.
-2. Run schema and migrations:
-   - `server/schema.sql`
-   - `server/rls-policies.sql`
-   - Apply files in `supabase/migrations/` (e.g. via Supabase CLI or Dashboard SQL).
-3. In production, CORS is set in `netlify/functions/_lib/security.ts` for your production origin (e.g. `https://deloitte-initiative-portal.netlify.app`).
+The app uses a **single** Supabase project (`ifrakipwdjrphyhkfupv`). For a fresh project or to align an existing one with this repo, run these **6 steps in order**:
+
+1. **server/schema.sql** – Base schema (users, initiatives, help_wanted, join_requests, tasks, notifications, feedback, etc.).
+2. **server/rls-policies.sql** – RLS policies.
+3. **supabase/migrations/add_supabase_auth.sql** – `auth_user_id`, trigger to sync `auth.users` → `public.users`, nullable `password_hash`.
+4. **supabase/migrations/20260210000000_add_invited_status_to_join_requests.sql** – `Invited` status on `join_requests`.
+5. **supabase/migrations/20260210100000_add_initiative_id_to_notifications.sql** – `initiative_id` on `notifications`.
+6. **supabase/migrations/20260210110000_add_feedback_table.sql** – `feedback` table (idempotent).
+
+### Option A: Supabase MCP (Cursor)
+
+If the Supabase MCP server is configured in Cursor (see **MCP (Cursor + Supabase)** below), you can run each step using the MCP **execute_sql** tool:
+
+1. Open each file above in order, copy its full SQL content, and run it via the Supabase MCP **execute_sql** action (or **apply_migration** if your MCP supports it).
+2. No local DB URL or `psql` is required; the MCP uses your Supabase access token and project ref.
+
+### Option B: CLI (psql)
+
+From the repo root, with a Postgres connection string and `psql` installed:
+
+```bash
+# Get connection string: Supabase Dashboard → Settings → Database → Connection string (URI)
+export SUPABASE_DB_URL='postgresql://postgres.[project-ref]:[PASSWORD]@...pooler.supabase.com:6543/postgres'
+./scripts/apply-database-setup.sh
+```
+
+Requires: `SUPABASE_DB_URL` and `psql` on PATH (e.g. `brew install libpq`).
+
+### Option C: Supabase Dashboard
+
+In [Supabase Dashboard](https://supabase.com/dashboard) → SQL Editor, run the contents of each of the 6 files above in order.
+
+CORS for the app is set in `netlify/functions/_lib/security.ts` to your single Netlify site URL.
 
 ## Netlify build
 
@@ -53,23 +80,15 @@ Configured in `netlify.toml`. SPA redirects and API redirects to `/.netlify/func
 
 The repo uses `.github/workflows/deploy.yml`:
 
-- **main:** type check, tests, build; deploys to production Netlify site.
-- **develop:** same checks; deploys to development Netlify site.
+- **main:** on push, type check, tests, build; deploys to the single Netlify site.
 - **Pull requests:** type check, tests, build; Netlify deploy preview.
 
 **Secrets (GitHub → Settings → Secrets and variables → Actions):**
 
 - `NETLIFY_AUTH_TOKEN` – Netlify personal access token
-- `NETLIFY_PROD_SITE_ID` – Production Netlify site ID
-- `NETLIFY_DEV_SITE_ID` – Development Netlify site ID
+- `NETLIFY_SITE_ID` – Your Netlify site ID (the single site for this app)
 
 Get the token from [Netlify User Settings → Applications → Personal access tokens](https://app.netlify.com/user/applications#personal-access-tokens).
-
-## Separate dev/prod environments
-
-- Use **two Supabase projects** (e.g. one for dev, one for prod).
-- Use **two Netlify sites** (e.g. dev branch → dev site, main → prod site).
-- Set the env vars above per site so each points to its own Supabase and URLs.
 
 ## Security checklist
 
