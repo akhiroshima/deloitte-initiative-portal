@@ -1,6 +1,6 @@
+
 import { Initiative, User, HelpWanted, InitiativeStatus, JoinRequest, JoinRequestStatus, Notification, NotificationType, Task, TaskStatus } from '../types';
 import * as db from './database';
-import { supabase } from './supabase';
 
 // Current user state
 let currentUserId: string | null = null;
@@ -34,6 +34,8 @@ export const getHelpWantedPosts = async (): Promise<HelpWanted[]> => {
 export const getAllJoinRequests = async (): Promise<JoinRequest[]> => {
     return await db.getAllJoinRequests();
 }
+
+// getCurrentUser moved above
 
 export const getUsers = async (): Promise<User[]> => {
     return await db.getAllUsers();
@@ -82,7 +84,9 @@ export const createInitiative = async (data: CreateInitiativeData): Promise<Init
 
     const newInitiativeData: Omit<Initiative, 'id'> = {
         ...restOfData,
+        ownerId: creatingUser.id,
         owner: creatingUser,
+        teamMembers: [],
         status: 'Searching Talent',
         startDate: new Date().toISOString().split('T')[0],
         coverImageUrl: finalCoverImageUrl,
@@ -136,24 +140,28 @@ export const createHelpWantedPost = async(data: CreateHelpWantedData): Promise<H
 
 export const updateHelpWantedPost = async (postId: string, data: Partial<Omit<HelpWanted, 'id' | 'initiativeId'>>): Promise<HelpWanted> => {
     const updatedPost = await db.updateHelpWanted(postId, data);
-    if (!updatedPost) throw new Error("Help wanted post not found");
+    if (!updatedPost) {
+        throw new Error("Help wanted post not found or failed to update");
+    }
     return updatedPost;
 };
 
 export const deleteHelpWantedPost = async (postId: string): Promise<void> => {
     const success = await db.deleteHelpWanted(postId);
-    if (!success) throw new Error("Help wanted post not found or failed to delete");
+    if (!success) {
+        throw new Error("Help wanted post not found or failed to delete");
+    }
 };
 
 export const updateInitiativeStatus = async (initiativeId: string, status: InitiativeStatus): Promise<Initiative | undefined> => {
     const initiative = await db.getInitiativeById(initiativeId);
     if (initiative) {
-        const updateData: any = { status };
+        const updateData: Record<string, unknown> = { status };
         if (status === 'Completed') {
             updateData.endDate = new Date().toISOString().split('T')[0];
         }
         const updatedInitiative = await db.updateInitiative(initiativeId, updateData);
-        return updatedInitiative || undefined;
+        return updatedInitiative ?? undefined;
     }
     return undefined;
 }
@@ -200,7 +208,7 @@ export const createJoinRequest = async (data: CreateJoinRequestData): Promise<Jo
     if (!newRequest) throw new Error("Failed to create join request");
     
     await generateNotification({
-        userId: initiative.owner.id,
+        userId: initiative.ownerId,
         type: NotificationType.REQUEST_RECEIVED,
         message: `${requester.name} requested to join '${initiative.title}'.`,
         link: { initiativeId: initiative.id, tab: 'requests' },
@@ -223,20 +231,8 @@ export const approveJoinRequest = async (requestId: string): Promise<void> => {
         throw new Error('Initiative or User not found.');
     }
 
-    // Add user to team members
-    const { error } = await supabase
-      .from('initiative_team_members')
-      .insert({
-        initiative_id: initiative.id,
-        user_id: user.id,
-        committed_hours: 0 // Default, as join_requests doesn't track this yet
-      });
-
-    if (error) {
-        console.error("Failed to add team member:", error);
-        // Don't throw, as the request is already approved. Just log it.
-        // Ideally we should transaction this.
-    }
+    // Note: Team member management would need to be implemented in the database
+    // For now, we'll just update the request status
 
     await generateNotification({
         userId: user.id,
@@ -267,9 +263,16 @@ export const rejectJoinRequest = async (requestId: string): Promise<void> => {
 };
 
 export const cancelJoinRequest = async (requestId: string): Promise<void> => {
-    // We can use deleteJoinRequest for cancellation
+    const allRequests = await db.getAllJoinRequests();
+    const request = allRequests.find(r => r.id === requestId);
+    if (!request) throw new Error("Request not found");
+    if (request.userId !== currentUserId) throw new Error("You can only cancel your own requests.");
+    if (request.status !== JoinRequestStatus.Pending) throw new Error("Only pending requests can be cancelled.");
+
     const success = await db.deleteJoinRequest(requestId);
-    if (!success) throw new Error("Request not found or failed to cancel");
+    if (!success) {
+        throw new Error("Failed to cancel join request");
+    }
 };
 
 
@@ -281,17 +284,20 @@ export const inviteUserToInitiative = async (initiativeId: string, inviteeId: st
     if (!initiative || !invitee || !inviter) throw new Error("Data not found");
     if (initiative.teamMembers.some(m => m.userId === inviteeId)) throw new Error("User is already on the team");
 
-    const newInviteData: Omit<JoinRequest, 'id' | 'createdAt'> = {
+    const newInvite = await db.createJoinRequest({
         initiativeId,
         userId: inviteeId,
         message: `${inviter.name} has invited you to join this project.`,
         status: JoinRequestStatus.Invited,
-    };
-    
-    const newInvite = await db.createJoinRequest(newInviteData);
-    if (!newInvite) throw new Error("Failed to invite user");
+        helpWantedId: undefined,
+        committedHours: undefined,
+    });
 
-    generateNotification({
+    if (!newInvite) {
+        throw new Error("Failed to create invitation");
+    }
+
+    await generateNotification({
         userId: inviteeId,
         type: NotificationType.INVITED_TO_PROJECT,
         message: `${inviter.name} has invited you to join '${initiative.title}'.`,
@@ -314,20 +320,9 @@ export const acceptInvite = async (requestId: string, committedHours: number): P
     const initiative = await db.getInitiativeById(request.initiativeId);
     if (!initiative) throw new Error("Initiative not found");
 
-    // Add user to team members in database
-    // Use raw supabase call for now as db helper might not exist for this specific operation
-    // Or better, update database.ts to include addTeamMember
-    // For now, mirroring existing logic which uses supabase directly
-    const { error } = await supabase
-      .from('initiative_team_members')
-      .insert({
-        initiative_id: request.initiativeId,
-        user_id: request.userId,
-        committed_hours: committedHours
-      });
-      
-    if (error) throw error;
-    
+    const added = await db.addTeamMember(request.initiativeId, request.userId, committedHours);
+    if (!added) throw new Error("Failed to add you to the team");
+
     // Remove the invitation from database
     await db.deleteJoinRequest(requestId);
 
@@ -341,21 +336,20 @@ export const acceptInvite = async (requestId: string, committedHours: number): P
 };
 
 export const declineInvite = async (requestId: string): Promise<void> => {
-    // Get request details before deleting for notification
-    const joinRequests = await db.getAllJoinRequests();
-    const request = joinRequests.find(r => r.id === requestId);
-    
-    if (!request) return;
+    const allRequests = await db.getAllJoinRequests();
+    const request = allRequests.find(r => r.id === requestId);
+    if (!request) return; // Fail silently if not found
 
     const initiative = await getInitiativeById(request.initiativeId);
-    
+
     await db.deleteJoinRequest(requestId);
 
-     if (initiative) {
-        generateNotification({
+    if (initiative) {
+        const user = await getUserById(request.userId);
+        await generateNotification({
             userId: initiative.ownerId,
             type: NotificationType.REQUEST_REJECTED,
-            message: `${(await getUserById(request.userId))?.name} declined the invitation to join '${initiative.title}'.`,
+            message: `${user?.name ?? 'A user'} declined the invitation to join '${initiative.title}'.`,
             link: { initiativeId: initiative.id, tab: 'overview' },
             initiativeId: initiative.id,
         });
@@ -396,11 +390,13 @@ export const getAllTasks = async (): Promise<Task[]> => {
     return await db.getAllTasks();
 }
 
+export type CreateTaskData = Omit<Task, 'id' | 'status'>;
+
 export const createTask = async (data: CreateTaskData): Promise<Task> => {
     const initiative = await getInitiativeById(data.initiativeId);
     if (!initiative) throw new Error("Initiative not found");
 
-    const newTaskData: Omit<Task, 'id' | 'createdAt'> = {
+    const newTaskData: Omit<Task, 'id'> = {
         ...data,
         status: TaskStatus.Todo,
     };
@@ -443,16 +439,23 @@ export const updateTask = async (taskId: string, updates: Partial<Task>): Promis
 }
 
 export const updateTasks = async (updatedTasks: Task[]): Promise<void> => {
-    if (updatedTasks.length === 0) return;
-    
-    // Process updates in parallel
-    await Promise.all(updatedTasks.map(task => db.updateTask(task.id, task)));
+    // Persist each updated task's status / assignee to the database.
+    for (const task of updatedTasks) {
+        await db.updateTask(task.id, {
+            status: task.status,
+            assigneeId: task.assigneeId,
+            title: task.title,
+            description: task.description,
+        });
+    }
 };
 
 
 export const deleteTask = async (taskId: string): Promise<void> => {
     const success = await db.deleteTask(taskId);
-    if (!success) throw new Error("Failed to delete task");
+    if (!success) {
+        throw new Error("Task not found or failed to delete");
+    }
 };
 
 

@@ -280,7 +280,7 @@ const Bulletin: React.FC<BulletinProps> = ({ initiatives, currentUser, users, on
         case 'my-initiatives':
             const myInitiatives = getMyInitiatives();
             const filteredMyInitiatives = myInitiatives.filter(initiative => {
-                const locationMatch = selectedLocations.length === 0 || (initiative.location && selectedLocations.includes(initiative.location));
+                const locationMatch = selectedLocations.length === 0 || (initiative.locations && initiative.locations.some(loc => selectedLocations.includes(loc)));
                 const skillMatch = selectedSkills.length === 0 || (initiative.skillsNeeded && initiative.skillsNeeded.some(skill => selectedSkills.includes(skill)));
                 const tagMatch = selectedTags.length === 0 || (initiative.tags && initiative.tags.some(tag => selectedTags.includes(tag)));
                 return locationMatch && skillMatch && tagMatch;
@@ -426,10 +426,14 @@ const Bulletin: React.FC<BulletinProps> = ({ initiatives, currentUser, users, on
         <div className="space-y-6">
           <Card className="p-0">
              <div className="border-b border-border px-6">
-                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                <nav className="-mb-px flex space-x-8" aria-label="Tabs" role="tablist">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
+                            role="tab"
+                            aria-selected={activeTab === tab.id}
+                            aria-controls={`bulletin-tabpanel-${tab.id}`}
+                            id={`bulletin-tab-${tab.id}`}
                             onClick={() => setActiveTab(tab.id)}
                             className={`shrink-0 border-b-2 px-1 py-3 text-sm font-medium transition-colors ${
                             activeTab === tab.id
@@ -452,7 +456,7 @@ const Bulletin: React.FC<BulletinProps> = ({ initiatives, currentUser, users, on
                     {areFiltersActive && <button onClick={handleClearFilters} className="ml-auto text-sm font-medium text-primary hover:underline">Clear all</button>}
                 </div>
                )}
-               <div key={activeTab} className="animate-fadeIn">
+               <div key={activeTab} className="animate-fadeIn" role="tabpanel" id={`bulletin-tabpanel-${activeTab}`} aria-labelledby={`bulletin-tab-${activeTab}`}>
                  {renderTabContent()}
                </div>
             </div>

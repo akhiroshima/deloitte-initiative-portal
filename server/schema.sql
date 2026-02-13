@@ -88,7 +88,7 @@ create table if not exists join_requests (
   initiative_id text not null references initiatives(id) on delete cascade,
   user_id text not null references users(id) on delete cascade,
   message text,
-  status text not null default 'Pending' check (status in ('Pending', 'Approved', 'Rejected')),
+  status text not null default 'Pending' check (status in ('Pending', 'Approved', 'Rejected', 'Invited')),
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now()
 );
@@ -113,6 +113,19 @@ create table if not exists notifications (
   title text not null,
   message text not null,
   is_read boolean not null default false,
+  initiative_id text references initiatives(id) on delete set null,
+  created_at timestamp with time zone default now()
+);
+
+-- Feedback (replaces ephemeral file storage)
+create table if not exists feedback (
+  id text primary key,
+  message text not null,
+  url text,
+  user_agent text,
+  viewport_width int,
+  viewport_height int,
+  screenshot_path text,
   created_at timestamp with time zone default now()
 );
 

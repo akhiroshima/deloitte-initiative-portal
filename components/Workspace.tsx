@@ -13,6 +13,8 @@ import { typography } from '../tokens/typography';
 import InitiativeCard from './InitiativeCard';
 import { AVAILABLE_LOCATIONS } from '../constants';
 import { ChevronRight } from 'lucide-react';
+import { StatusBadge } from './ui/StatusBadge';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 
 
 interface WorkspaceProps {
@@ -38,6 +40,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
   const [isAcceptModalOpen, setIsAcceptModalOpen] = useState(false);
   const [selectedInvite, setSelectedInvite] = useState<JoinRequest | null>(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ title: string; message: string; onConfirm: () => void | Promise<void> } | null>(null);
   const { addToast } = useToasts();
 
   useEffect(() => {
@@ -92,17 +95,17 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
     setIsAcceptModalOpen(true);
   };
   
-  const handleDeclineClick = async (inviteId: string) => {
-    if (window.confirm("Are you sure you want to decline this invitation?")) {
-        try {
+const handleDeclineClick = (inviteId: string) => {
+    setConfirmState({
+        title: 'Decline invitation',
+        message: 'Are you sure you want to decline this invitation?',
+        onConfirm: async () => {
             await api.declineInvite(inviteId);
             addToast("Invitation declined.", "info");
             onDataChange();
-        } catch (error) {
-            addToast("Failed to decline invitation.", "error");
-        }
-    }
-  };
+        },
+    });
+};
   
   const handleAcceptSubmit = async (committedHours: number) => {
     if (!selectedInvite) return;
@@ -117,17 +120,21 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
     }
   };
 
-  const handleCancelRequest = async (requestId: string) => {
-    if (window.confirm("Are you sure you want to withdraw your application?")) {
-        try {
-            await api.cancelJoinRequest(requestId);
-            addToast("Application withdrawn.", "success");
-            onDataChange();
-        } catch (error) {
-            addToast(error instanceof Error ? error.message : "Failed to withdraw application.", "error");
-            console.error(error);
-        }
-    }
+  const handleCancelRequest = (requestId: string) => {
+    setConfirmState({
+        title: 'Withdraw application',
+        message: 'Are you sure you want to withdraw your application?',
+        onConfirm: async () => {
+            try {
+                await api.cancelJoinRequest(requestId);
+                addToast("Application withdrawn.", "success");
+                onDataChange();
+            } catch (error) {
+                addToast(error instanceof Error ? error.message : "Failed to withdraw application.", "error");
+                console.error(error);
+            }
+        },
+    });
   };
 
   const myActiveInitiatives = initiatives.filter(i => i.teamMembers && i.teamMembers.some(m => m.userId === currentUser.id) && i.status !== 'Completed');
@@ -149,14 +156,6 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
     }, {} as Record<string, { initiative: Initiative, tasks: Task[] }>);
   }, [myTasks, initiatives]);
 
-
-  const getStatusChip = (status: JoinRequestStatus) => {
-    switch(status) {
-        case 'Approved': return <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Approved</span>;
-        case 'Rejected': return <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">Rejected</span>;
-        default: return <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground">Pending</span>;
-    }
-  };
 
   const tabs: {id: WorkspaceTab, label: string}[] = [
       { id: 'profile', label: 'Profile' },
@@ -267,6 +266,8 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
                                   key={task.id}
                                   onClick={() => onSelectInitiative(initiative.id, 'tasks')}
                                   role="button"
+                                  tabIndex={0}
+                                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectInitiative(initiative.id, 'tasks'); } }}
                                   className="flex items-center justify-between p-4 mx-2 rounded-lg hover:bg-muted cursor-pointer transition-colors"
                                 >
                                   <div>
@@ -363,7 +364,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
                                     <p className="text-sm text-muted-foreground mt-1 truncate">"{request.message}"</p>
                                 </div>
                                 <div className="flex-shrink-0 flex items-center gap-2">
-                                    {getStatusChip(request.status)}
+                                    <StatusBadge status={request.status} />
                                     {request.status === JoinRequestStatus.Pending && (
                                         <button 
                                             onClick={() => handleCancelRequest(request.id)}
@@ -436,6 +437,17 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
           addToast("Password changed successfully!", "success");
         }}
       />
+      {confirmState && (
+        <ConfirmDialog
+          open={!!confirmState}
+          onOpenChange={(open) => !open && setConfirmState(null)}
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmLabel="Yes"
+          cancelLabel="Cancel"
+          onConfirm={confirmState.onConfirm}
+        />
+      )}
       <div className="space-y-8">
         <div className="flex justify-between items-start">
             <div>
@@ -456,10 +468,14 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
         </div>
         
         <div className="border-b border-border">
-            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            <nav className="-mb-px flex space-x-8" aria-label="Tabs" role="tablist">
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
+                        role="tab"
+                        aria-selected={activeTab === tab.id}
+                        aria-controls={`workspace-tabpanel-${tab.id}`}
+                        id={`workspace-tab-${tab.id}`}
                         onClick={() => setActiveTab(tab.id)}
                         className={`shrink-0 border-b-2 px-1 py-4 text-base font-medium ${
                         activeTab === tab.id
@@ -473,7 +489,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ currentUser, initiatives, joinReq
             </nav>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8" role="tabpanel" id={`workspace-tabpanel-${activeTab}`} aria-labelledby={`workspace-tab-${activeTab}`}>
             {renderTabContent()}
         </div>
       </div>

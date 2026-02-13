@@ -81,7 +81,7 @@ const callLLM = async (prompt: string, systemPrompt?: string): Promise<string> =
         ...(isProxied ? {} : (config.requiresApiKey && apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}))
       },
       body: JSON.stringify({
-        model: config.models.llama3 || config.models.llama2,
+        model: ('llama3' in config.models && config.models.llama3) || config.models.llama2,
         messages: [
           ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
           { role: 'user', content: prompt }

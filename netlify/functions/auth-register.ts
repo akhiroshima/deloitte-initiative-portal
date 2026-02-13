@@ -4,14 +4,14 @@ import { createClient } from '@supabase/supabase-js'
 import { authRateLimit, createRateLimitResponse } from './_lib/rateLimit'
 import { withSecurity } from './_lib/security'
 
-const bodySchema = z.object({ 
-  username: z.string().min(2).max(50), 
-  name: z.string().min(2),
-  role: z.enum(['Designer', 'Developer', 'Lead', 'Manager']),
-  location: z.string().min(2),
-  skills: z.array(z.string()).min(1),
-  weeklyCapacityHrs: z.number().min(1).max(40),
-  password: z.string().min(8).optional() // Optional password, will be generated if not provided
+const bodySchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  name: z.string().min(1).max(200).optional(),
+  role: z.enum(['Designer', 'Developer', 'Lead', 'Manager']).optional(),
+  location: z.string().min(1).max(100).optional(),
+  skills: z.array(z.string().max(50)).min(0).max(20).optional(),
+  weeklyCapacityHrs: z.number().min(1).max(40).optional(),
 })
 
 const registerHandler: Handler = async (event) => {
@@ -20,131 +20,101 @@ const registerHandler: Handler = async (event) => {
       return { statusCode: 405, body: 'Method Not Allowed' }
     }
 
-    // Apply rate limiting
-    const rateLimitResult = authRateLimit(event);
-    const rateLimitResponse = createRateLimitResponse(rateLimitResult);
-    if (rateLimitResponse) {
-      return rateLimitResponse;
-    }
+    const rateLimitResult = authRateLimit(event)
+    const rateLimitResponse = createRateLimitResponse(rateLimitResult)
+    if (rateLimitResponse) return rateLimitResponse
 
     const parsed = bodySchema.safeParse(JSON.parse(event.body || '{}'))
     if (!parsed.success) {
       return { statusCode: 400, body: JSON.stringify({ error: parsed.error.message }) }
     }
 
-    const { username, name, role, location, skills, weeklyCapacityHrs, password } = parsed.data
+    const { email, password, name, role, location, skills, weeklyCapacityHrs } = parsed.data
+    const emailLower = email.toLowerCase().trim()
     const allowedDomain = (process.env.ALLOWED_EMAIL_DOMAIN || 'deloitte.com').toLowerCase()
-    
-    // Construct email from username and allowed domain
-    const emailLower = `${username.toLowerCase().trim()}@${allowedDomain}`
 
-    // Validate email domain
     if (!emailLower.endsWith(`@${allowedDomain}`)) {
-      return { 
-        statusCode: 403, 
-        body: JSON.stringify({ error: `Only @${allowedDomain} email addresses are allowed` }) 
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ error: `Only @${allowedDomain} email addresses are allowed` })
       }
     }
 
-    // Initialize Supabase Admin client (needs service role key for admin operations)
     const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!supabaseUrl || !supabaseServiceKey) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'Database not configured' }) }
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'Database not configured',
+          hint: 'SUPABASE_SERVICE_ROLE_KEY is required for registration'
+        })
+      }
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Generate random password if not provided
-    const userPassword = password || generatePassword()
-    
-    // Get the site URL for email redirect
     const siteUrl = process.env.URL || 'http://localhost:5173'
+    const username = emailLower.split('@')[0] ?? 'user'
+    const displayName = name?.trim() || username
+    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`
 
-    // Register user with Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: emailLower,
-      password: userPassword,
+      password,
       options: {
         emailRedirectTo: `${siteUrl}/auth/callback`,
         data: {
-          username: username.toLowerCase().trim(),
-          name,
-          role,
-          location,
-          skills,
-          weekly_capacity_hrs: weeklyCapacityHrs,
-          avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+          username,
+          name: displayName,
+          role: role ?? 'Developer',
+          location: location ?? 'Remote',
+          skills: skills ?? [],
+          weekly_capacity_hrs: weeklyCapacityHrs ?? 40,
+          avatar_url: avatarUrl
         }
       }
     })
 
     if (error) {
       console.error('Supabase Auth signup error:', error)
-      
-      // Handle specific errors
-      if (error.message.includes('already registered')) {
+      if (error.message.includes('already registered') || error.message.includes('already been registered')) {
         return { statusCode: 409, body: JSON.stringify({ error: 'User already exists' }) }
       }
-      
-      return { 
-        statusCode: 500, 
-        body: JSON.stringify({ 
-          error: 'Failed to create user',
-          details: error.message
-        }) 
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Failed to create user', details: error.message })
       }
     }
 
-    // Note: The trigger function will automatically create the user in the public.users table
-    // Email confirmation will be sent automatically by Supabase Auth
-    
     return {
       statusCode: 201,
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ 
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         ok: true,
         message: 'Registration successful! Please check your email to confirm your account before logging in.',
         requiresEmailConfirmation: true,
-        user: { 
+        user: {
           id: data.user?.id,
           email: emailLower,
-          username: username.toLowerCase().trim(),
-          name,
-          role,
-          location,
-          skills,
-          weeklyCapacityHrs
-        } 
+          username,
+          name: displayName,
+          role: role ?? 'Developer',
+          location: location ?? 'Remote',
+          skills: skills ?? [],
+          weeklyCapacityHrs: weeklyCapacityHrs ?? 40
+        }
       })
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Registration error:', e)
-    return { 
-      statusCode: 500, 
-      body: JSON.stringify({ 
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
         error: 'Server error',
-        details: e.message
-      }) 
+        details: e instanceof Error ? e.message : String(e)
+      })
     }
   }
 }
 
-export const handler = withSecurity(registerHandler);
-
-// Generate a secure random password
-function generatePassword(): string {
-  const length = 16
-  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
-  let password = ''
-  const randomValues = new Uint8Array(length)
-  crypto.getRandomValues(randomValues)
-  
-  for (let i = 0; i < length; i++) {
-    password += charset[randomValues[i] % charset.length]
-  }
-  
-  return password
-}
+export const handler = withSecurity(registerHandler)

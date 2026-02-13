@@ -30,11 +30,10 @@ export const addSecurityHeaders = (response: any) => {
   };
 };
 
-// CORS configuration
+// CORS configuration – single allowed origin (Netlify site URL from env)
+const allowedOrigin = process.env.URL || process.env.NETLIFY_SITE_URL || '*';
 export const corsHeaders = {
-  'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production' 
-    ? 'https://your-domain.com' // Replace with actual domain
-    : '*',
+  'Access-Control-Allow-Origin': allowedOrigin,
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
   'Access-Control-Max-Age': '86400',

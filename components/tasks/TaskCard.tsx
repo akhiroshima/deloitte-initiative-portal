@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { cva } from 'class-variance-authority';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -6,6 +6,7 @@ import { Task, User } from '../../types';
 import * as api from '../../services/api';
 import { useToasts } from '../ui/ToastProvider';
 import { Card } from '../ui/Card';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Trash2 } from 'lucide-react';
 
 function cn(...inputs: any[]) {
@@ -27,7 +28,24 @@ interface TaskCardProps {
 const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, isOwner, isTeamMember, isDragging, onDataChange, onDragStart, onDragEnd, style }) => {
     const assignee = teamMembers.find(m => m.id === task.assigneeId);
     const { addToast } = useToasts();
-    
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    const handleDeleteTask = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setShowDeleteConfirm(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        try {
+            await api.deleteTask(task.id);
+            addToast('Task deleted', 'success');
+            onDataChange();
+        } catch (error) {
+            addToast('Failed to delete task', 'error');
+            console.error(error);
+        }
+    };
+
     const handleAssigneeChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newAssigneeId = e.target.value || undefined;
         try {
@@ -40,21 +58,18 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, isOwner, isTeamM
         }
     }
 
-    const handleDeleteTask = async (e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent card click/drag
-        if (window.confirm('Are you sure you want to delete this task?')) {
-            try {
-                await api.deleteTask(task.id);
-                addToast('Task deleted', 'success');
-                onDataChange();
-            } catch (error) {
-                addToast('Failed to delete task', 'error');
-                console.error(error);
-            }
-        }
-    }
-
     return (
+        <>
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete task"
+        message="Are you sure you want to delete this task?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleConfirmDelete}
+        variant="danger"
+      />
         <Card 
             className={cn(
                 "p-4 cursor-grab relative group hover:shadow-md hover:border-primary dnd-item-transition",
@@ -104,6 +119,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, isOwner, isTeamM
                 )}
             </div>
         </Card>
+        </>
     );
 };
 

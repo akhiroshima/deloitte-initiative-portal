@@ -12,6 +12,8 @@ import TasksBoard from './tasks/TasksBoard';
 import RequestToJoinModal from './RequestToJoinModal';
 import { useToasts } from './ui/ToastProvider';
 import JoinRequestSkeleton from './JoinRequestSkeleton';
+import { StatusBadge } from './ui/StatusBadge';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 
 
 interface InitiativeDetailProps {
@@ -35,8 +37,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [editingCommitmentFor, setEditingCommitmentFor] = useState<string | null>(null);
   const [newCommitment, setNewCommitment] = useState(0);
-  const [processingId, setProcessingId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ title: string; message: string; onConfirm: () => void | Promise<void> } | null>(null);
 
   const { addToast } = useToasts();
 
@@ -96,17 +97,21 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
     }
   };
 
-  const handleDeleteHelpWanted = async (postId: string) => {
-    if (window.confirm('Are you sure you want to delete this Help Wanted post?')) {
-        try {
-            await api.deleteHelpWantedPost(postId);
-            addToast('Help Wanted post deleted.', 'info');
-            onDataChange();
-        } catch (error) {
-            addToast('Failed to delete post.', 'error');
-            console.error(error);
-        }
-    }
+  const handleDeleteHelpWanted = (postId: string) => {
+    setConfirmState({
+        title: 'Delete Help Wanted post',
+        message: 'Are you sure you want to delete this Help Wanted post?',
+        onConfirm: async () => {
+            try {
+              await api.deleteHelpWantedPost(postId);
+              addToast('Help Wanted post deleted.', 'info');
+              onDataChange();
+            } catch (error) {
+              addToast('Failed to delete post.', 'error');
+              console.error(error);
+            }
+        },
+    });
   };
 
   const handleOpenCreateModal = () => {
@@ -119,8 +124,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
     setIsHelpWantedModalOpen(true);
   };
   
-  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newStatus = e.target.value as InitiativeStatus;
+  const handleStatusChange = async (newStatus: InitiativeStatus) => {
     await api.updateInitiativeStatus(initiative.id, newStatus);
     addToast('Initiative status updated.', 'success');
     onDataChange();
@@ -132,31 +136,15 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
   }
 
   const handleApprove = async (requestId: string) => {
-    setProcessingId(requestId);
-    try {
-      await api.approveJoinRequest(requestId);
-      addToast('Request approved.', 'success');
-      onDataChange();
-    } catch (error) {
-      addToast('Failed to approve request.', 'error');
-      console.error(error);
-    } finally {
-      setProcessingId(null);
-    }
+    await api.approveJoinRequest(requestId);
+    addToast('Request approved.', 'success');
+    onDataChange();
   };
 
   const handleReject = async (requestId: string) => {
-    setProcessingId(requestId);
-    try {
-      await api.rejectJoinRequest(requestId);
-      addToast('Request rejected.', 'info');
-      onDataChange();
-    } catch (error) {
-      addToast('Failed to reject request.', 'error');
-      console.error(error);
-    } finally {
-      setProcessingId(null);
-    }
+    await api.rejectJoinRequest(requestId);
+    addToast('Request rejected.', 'info');
+    onDataChange();
   };
 
   const handleRequestSubmitted = () => {
@@ -180,20 +168,22 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
     }
   };
 
-  const handleDeleteInitiative = async () => {
-    if (window.confirm('Are you sure you want to permanently delete this initiative? This will also delete all associated tasks, roles, and requests. This action cannot be undone.')) {
-        setIsDeleting(true);
-        try {
-            await api.deleteInitiative(initiative.id);
-            addToast('Initiative deleted successfully.', 'success');
-            onDataChange();
-            onBack(); // Go back to the previous view
-        } catch (error) {
-            addToast(error instanceof Error ? error.message : 'Failed to delete initiative.', 'error');
-            console.error(error);
-            setIsDeleting(false);
-        }
-    }
+  const handleDeleteInitiative = () => {
+    setConfirmState({
+        title: 'Delete initiative',
+        message: 'Are you sure you want to permanently delete this initiative? This will also delete all associated tasks, roles, and requests. This action cannot be undone.',
+        onConfirm: async () => {
+            try {
+              await api.deleteInitiative(initiative.id);
+              addToast('Initiative deleted successfully.', 'success');
+              onDataChange();
+              onBack();
+            } catch (error) {
+              addToast(error instanceof Error ? error.message : 'Failed to delete initiative.', 'error');
+              console.error(error);
+            }
+        },
+    });
   };
 
   const canJoin = !isTeamMember && (initiative.status === 'Searching Talent' || initiative.status === 'In Progress');
@@ -214,6 +204,18 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
         initiativeTitle={initiative.title}
         currentUser={currentUser}
       />
+      {confirmState && (
+        <ConfirmDialog
+          open={!!confirmState}
+          onOpenChange={(open) => !open && setConfirmState(null)}
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmLabel="Yes, delete"
+          cancelLabel="Cancel"
+          onConfirm={confirmState.onConfirm}
+          variant="danger"
+        />
+      )}
     <div className="space-y-8">
       {/* Header */}
       <div>
@@ -227,8 +229,12 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
       
       {/* Tabs */}
       <div className="border-b border-border">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+        <nav className="-mb-px flex space-x-8" aria-label="Initiative tabs" role="tablist">
           <button
+            role="tab"
+            aria-selected={activeTab === 'overview'}
+            aria-controls="initiative-tabpanel-overview"
+            id="initiative-tab-overview"
             onClick={() => setActiveTab('overview')}
             className={`shrink-0 border-b-2 px-1 pb-4 text-base font-medium transition-colors ${
               activeTab === 'overview'
@@ -240,6 +246,10 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
           </button>
           {isTeamMember && (
            <button
+            role="tab"
+            aria-selected={activeTab === 'tasks'}
+            aria-controls="initiative-tabpanel-tasks"
+            id="initiative-tab-tasks"
             onClick={() => setActiveTab('tasks')}
             className={`flex items-center gap-2 shrink-0 border-b-2 px-1 pb-4 text-base font-medium transition-colors ${
               activeTab === 'tasks'
@@ -256,6 +266,10 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
           )}
           {isOwner && (
             <button
+              role="tab"
+              aria-selected={activeTab === 'requests'}
+              aria-controls="initiative-tabpanel-requests"
+              id="initiative-tab-requests"
               onClick={() => setActiveTab('requests')}
               className={`flex items-center gap-2 shrink-0 border-b-2 px-1 pb-4 text-base font-medium transition-colors ${
                 activeTab === 'requests'
@@ -275,7 +289,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
       </div>
 
       {/* Tab Content */}
-      <div className="mt-8" key={activeTab}>
+      <div className="mt-8" key={activeTab} role="tabpanel" id={`initiative-tabpanel-${activeTab}`} aria-labelledby={`initiative-tab-${activeTab}`}>
         {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8 animate-fadeIn">
               {/* Left Column */}
@@ -395,7 +409,7 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                     <li className="flex items-center gap-4">
                       <span className="font-semibold text-muted-foreground w-24 flex-shrink-0">Status</span>
                        {isOwner && initiative.status !== 'Completed' ? (
-                          <Select value={initiative.status} onValueChange={(value) => handleStatusChange({ target: { value } })}>
+                          <Select value={initiative.status} onValueChange={(value) => handleStatusChange(value as InitiativeStatus)}>
                             <SelectTrigger className="w-full">
                               <SelectValue />
                             </SelectTrigger>
@@ -422,8 +436,9 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                   </div>
                   {isOwner && (
                     <div className="mt-4 pt-4 border-t border-destructive/20">
-                        <Button variant="destructive" className="w-full" onClick={handleDeleteInitiative} disabled={isDeleting}>
-                            {isDeleting ? 'Deleting...' : <><Trash2 className="h-5 w-5 mr-2 -ml-1" /> Delete Initiative</>}
+                        <Button variant="destructive" className="w-full" onClick={handleDeleteInitiative}>
+                            <Trash2 className="h-5 w-5 mr-2 -ml-1" />
+                            Delete Initiative
                         </Button>
                     </div>
                    )}
@@ -488,14 +503,6 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                 const requester = users.find(u => u.id === request.userId);
                 if (!requester) return null;
 
-                const getStatusChip = (status: JoinRequestStatus) => {
-                  switch(status) {
-                    case 'Approved': return <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Approved</span>;
-                    case 'Rejected': return <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">Rejected</span>;
-                    default: return <span className="text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-full bg-secondary text-secondary-foreground">Pending</span>;
-                  }
-                }
-
                 return (
                   <Card key={request.id} className="p-5">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -509,18 +516,18 @@ const InitiativeDetail: React.FC<InitiativeDetailProps> = ({ initiative, current
                            )}
                         </div>
                       </div>
-                      <div className="flex-shrink-0">{getStatusChip(request.status)}</div>
+                      <div className="flex-shrink-0"><StatusBadge status={request.status} /></div>
                     </div>
                     {(isOwner || currentUser.id === requester.id) && (
                       <div className="mt-4 sm:pl-16">
                         <p className="text-sm text-foreground bg-muted p-4 rounded-md">{request.message}</p>
                         {isOwner && request.status === 'Pending' && (
                           <div className="mt-4 flex gap-3">
-                            <Button onClick={() => handleApprove(request.id)} disabled={!!processingId}>
-                              {processingId === request.id ? 'Processing...' : <><CheckCircle className="h-5 w-5 mr-2 -ml-1" /> Approve</>}
+                            <Button onClick={() => handleApprove(request.id)}>
+                              <CheckCircle className="h-5 w-5 mr-2 -ml-1" /> Approve
                             </Button>
-                            <Button variant="secondary" onClick={() => handleReject(request.id)} disabled={!!processingId}>
-                              {processingId === request.id ? 'Processing...' : <><XCircle className="h-5 w-5 mr-2 -ml-1" /> Reject</>}
+                            <Button variant="secondary" onClick={() => handleReject(request.id)}>
+                              <XCircle className="h-5 w-5 mr-2 -ml-1" /> Reject
                             </Button>
                           </div>
                         )}

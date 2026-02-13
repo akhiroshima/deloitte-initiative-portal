@@ -2,13 +2,23 @@
 
 This backend adds intelligent search using embeddings + pgvector and Groq for intent/reasoning.
 
-Overview
-- Functions: Netlify Functions in `netlify/functions/`
+## Overview
+
+- **Functions:** Netlify Functions in `netlify/functions/`
   - `ai-search.ts`: POST /api/ai-search { query, maxInitiatives?, maxRoles? }
-- Database: Postgres (Supabase recommended) with `pgvector` for semantic search
-- Embeddings provider: Hugging Face Inference (MiniLM-L6-v2) by default
-- Reasoning/summarization: Groq (LLM)
-- Authentication: Netlify Functions with email-domain allowlist + shared password (temporary)
+  - Auth: `auth-login`, `auth-logout`, `auth-me`, `auth-register`, `auth-set-cookies`, `auth-change-password`, `auth-reset-password`
+- **Database:** Postgres (Supabase) with `pgvector` for semantic search
+- **Embeddings:** Hugging Face Inference (MiniLM-L6-v2) by default
+- **LLM:** Groq for reasoning/summarization
+- **Authentication:** Supabase Auth (email/password, domain allowlist, session cookies)
+
+## Authentication (Supabase Auth)
+
+- **Registration:** `auth-register` accepts email + password (+ optional profile); creates users in Supabase Auth; a DB trigger syncs to `public.users`. Email confirmation required before login; user is redirected to `/auth/callback` after confirming.
+- **Session:** JWT stored in HTTP-only cookies (`sb-access-token`, `sb-refresh-token`). Frontend calls `auth-me` with credentials to get current user. After email confirmation or password-reset link, the client calls `auth-set-cookies` to sync the Supabase client session into cookies.
+- **Domain:** Only emails from `ALLOWED_EMAIL_DOMAIN` (e.g. `deloitte.com`) are allowed; enforced in register and optionally via Supabase Edge Function.
+- **Password reset:** Handled by Supabase Auth; use `auth-reset-password` and Supabase email templates.
+- **Env:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (for registration), `ALLOWED_EMAIL_DOMAIN`, `URL` (site URL for redirects).
 
 Prerequisites
 - Supabase project with Postgres (or any Postgres with pgvector)

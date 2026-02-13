@@ -1,21 +1,32 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Deloitte Initiative Portal
 
-# Run and deploy your AI Studio app
+Internal initiative and talent-matching portal: bulletin, opportunities, workspace, and AI-powered search.
 
-This contains everything you need to run your app locally.
+## Run locally
 
-View your app in AI Studio: https://ai.studio/apps/drive/1iI078x8Td1EBQAN3psbGZQFA4cnGDnmo
+**Prerequisites:** Node.js 18+
 
-## Run Locally
+1. Install dependencies: `npm install`
+2. Copy `env-template.txt` to `.env.local` and set:
+   - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (from your Supabase project)
+   - For local Netlify dev: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ALLOWED_EMAIL_DOMAIN`, `GROQ_API_KEY`, etc.
+3. Run: `npm run dev`
 
-**Prerequisites:**  Node.js
+## Environment & deployment
 
+- **Full deployment and env setup:** [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) (Netlify, Supabase, env vars, CI/CD, MCP).
+- **Backend (functions, DB, auth):** [BACKEND.md](BACKEND.md).
+- **Design system:** [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
-# Trigger deployment
+## Scripts
+
+- `npm run dev` – Vite dev server
+- `npm run build` – Production build
+- `npm run test` – Unit tests (Vitest)
+- `npm run setup:mcp` – Prepare MCP env file for Cursor + Supabase
+
+## Tech stack
+
+- **Frontend:** React, TypeScript, Vite, React Router, Tailwind
+- **Backend:** Netlify Functions, Supabase (Postgres + Auth)
+- **AI:** Groq (LLM), Hugging Face (embeddings), pgvector

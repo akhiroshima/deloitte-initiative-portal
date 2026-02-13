@@ -75,7 +75,7 @@ className={`group relative h-full cursor-pointer p-0 flex flex-col overflow-hidd
         onClick={onSelect}
         role="button"
         tabIndex={0}
-        onKeyPress={(e) => e.key === 'Enter' && onSelect()}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } }}
         style={style}
       >
         <img src={initiative.coverImageUrl} alt={initiative.title} className="h-36 w-full object-cover" />

@@ -1,11 +1,10 @@
-# Supabase Configuration
-# Get these from your Supabase project dashboard: Settings → API
-SUPABASE_URL=your_supabase_url_here
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
+# Supabase Configuration (single project: ifrakipwdjrphyhkfupv)
+SUPABASE_URL=https://ifrakipwdjrphyhkfupv.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmcmFraXB3ZGpycGh5aGtmdXB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2Nzc1MDEsImV4cCI6MjA3NDI1MzUwMX0.zYCyYZl8wAfXXHIrD69wp9uFxmH1QPiNCxW-dkawLtY
 
 # Frontend environment variables (Vite requires VITE_ prefix)
-VITE_SUPABASE_URL=your_supabase_url_here
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+VITE_SUPABASE_URL=https://ifrakipwdjrphyhkfupv.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmcmFraXB3ZGpycGh5aGtmdXB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2Nzc1MDEsImV4cCI6MjA3NDI1MzUwMX0.zYCyYZl8wAfXXHIrD69wp9uFxmH1QPiNCxW-dkawLtY
 
 # Authentication
 ALLOWED_EMAIL_DOMAIN=deloitte.com

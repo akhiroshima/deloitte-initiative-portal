@@ -3,11 +3,10 @@ name: Deploy to Netlify
 on:
   push:
     branches:
-      - main      # Deploy to production
-      - develop   # Deploy to development
+      - main
   pull_request:
     branches:
-      - main      # Deploy preview for PRs to main
+      - main
 
 jobs:
   deploy:
@@ -25,22 +24,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm run test
+
       - name: Build project
         run: npm run build
 
-      - name: Deploy to Production
+      - name: Deploy to Netlify
         if: github.ref == 'refs/heads/main'
         uses: netlify/actions/cli@master
         with:
-          args: deploy --prod --dir=dist --site=${{ secrets.NETLIFY_PROD_SITE_ID }} --no-build
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-
-      - name: Deploy to Development
-        if: github.ref == 'refs/heads/develop'
-        uses: netlify/actions/cli@master
-        with:
-          args: deploy --prod --dir=dist --site=${{ secrets.NETLIFY_DEV_SITE_ID }} --no-build
+          args: deploy --prod --dir=dist --site=${{ secrets.NETLIFY_SITE_ID }} --no-build
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
 
@@ -48,6 +45,6 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: netlify/actions/cli@master
         with:
-          args: deploy --dir=dist --site=${{ secrets.NETLIFY_PROD_SITE_ID }} --no-build
+          args: deploy --dir=dist --site=${{ secrets.NETLIFY_SITE_ID }} --no-build
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}

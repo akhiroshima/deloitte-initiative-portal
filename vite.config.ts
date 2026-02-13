@@ -1,5 +1,7 @@
 import path from 'path';
+import type { IncomingMessage, ServerResponse } from 'http';
 import { defineConfig, loadEnv } from 'vite';
+import type { ViteDevServer } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
@@ -7,8 +9,7 @@ export default defineConfig(({ mode }) => {
     return {
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        // Only expose non-sensitive config to the client.
         'process.env.LLM_PROVIDER': JSON.stringify(env.LLM_PROVIDER || 'groq'),
         // Flag to indicate dev proxy is available in browser runtime
         'window.__DEV_PROXY__': mode === 'development'
@@ -18,11 +19,15 @@ export default defineConfig(({ mode }) => {
           '@': path.resolve(__dirname, '.'),
         }
       },
+      test: {
+        environment: 'jsdom',
+        setupFiles: ['vitest.setup.ts'],
+      },
       server: {
         // Add a minimal proxy middleware to call Groq server-side (avoids CORS and keeps key server-side)
         middlewareMode: false,
-        configureServer(server) {
-          server.middlewares.use('/api/groq/chat/completions', async (req, res) => {
+        configureServer(server: ViteDevServer) {
+          server.middlewares.use('/api/groq/chat/completions', async (req: IncomingMessage, res: ServerResponse) => {
             try {
               const chunks = [];
               for await (const chunk of req) chunks.push(chunk);

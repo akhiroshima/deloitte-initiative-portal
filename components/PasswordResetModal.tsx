@@ -35,11 +35,14 @@ const PasswordResetModal: React.FC<PasswordResetModalProps> = ({ isOpen, onClose
     setError(null);
 
     try {
+      const body = email.trim().includes('@')
+        ? { email: email.trim() }
+        : { username: email.trim() };
       const response = await fetch('/.netlify/functions/auth-reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username: email.split('@')[0] || email })
+        body: JSON.stringify(body)
       });
 
       const data = await response.json();

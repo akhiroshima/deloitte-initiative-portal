@@ -198,11 +198,11 @@ const Dashboard: React.FC<DashboardProps> = ({ initiatives, users, tasks, onSele
                                 <span className="font-semibold text-foreground">{item.location}</span>
                                 <span className="text-sm text-muted-foreground">{item.assigned.toFixed(1)} / {item.capacity} hrs</span>
                             </div>
-                            <div className="w-full bg-muted rounded-full h-4">
+                            <div className="w-full bg-muted rounded-full h-4" role="progressbar" aria-valuenow={Math.min(item.percentage, 100)} aria-valuemin={0} aria-valuemax={100} aria-label={`${item.location} utilization ${item.percentage}%`}>
                                 <div 
                                     className={`rounded-full h-4 ${item.percentage > 100 ? 'bg-destructive' : (item.percentage > 80 ? 'bg-secondary' : 'bg-primary')}`}
                                     style={{ width: `${Math.min(item.percentage, 100)}%`}}
-                                ></div>
+                                />
                             </div>
                         </div>
                     ))}
@@ -292,11 +292,11 @@ const UserCard: React.FC<UserCardProps> = ({ user, computedData, onSelectUser, o
                     <span className="text-sm font-medium text-foreground">Weekly Utilisation ({utilizationPercentage}%)</span>
                     <span className="text-xs text-muted-foreground">{assignedHrs.toFixed(1)} / {capacityHrs} hrs</span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2.5">
+                <div className="w-full bg-muted rounded-full h-2.5" role="progressbar" aria-valuenow={Math.min(utilizationPercentage, 100)} aria-valuemin={0} aria-valuemax={100} aria-label={`${user.name} weekly utilisation ${utilizationPercentage}%`}>
                     <div 
                         className={`rounded-full h-2.5 ${barColor}`}
                         style={{ width: `${Math.min(utilizationPercentage, 100)}%`}}
-                    ></div>
+                    />
                 </div>
             </div>
 

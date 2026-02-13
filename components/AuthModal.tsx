@@ -5,8 +5,9 @@ import { Card } from './ui/Card';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { typography } from '../tokens/typography';
-import { Eye, EyeOff, Mail, Lock, User, MapPin, Briefcase, XCircle, X, Clock } from 'lucide-react';
-import { AVAILABLE_LOCATIONS, IS_DEV_MODE } from '../constants';
+import { Eye, EyeOff, Mail, Lock, User, MapPin, Briefcase, XCircle, Clock } from 'lucide-react';
+import { AVAILABLE_LOCATIONS } from '../constants';
+import PasswordResetModal from './PasswordResetModal';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -22,15 +23,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Login form state
-  const [loginData, setLoginData] = useState({
-    username: '',
-    password: ''
-  });
-  
-  // Register form state
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [loginData, setLoginData] = useState({ emailOrUsername: '', password: '' });
   const [registerData, setRegisterData] = useState({
-    username: '',
+    email: '',
+    password: '',
     name: '',
     role: 'Developer' as 'Designer' | 'Developer' | 'Lead' | 'Manager',
     location: '',
@@ -38,26 +35,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
     weeklyCapacityHrs: 40
   });
 
-  // Dev registration form state (simplified)
-  const [devRegisterData, setDevRegisterData] = useState({
-    email: '',
-    password: ''
-  });
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    const isEmail = loginData.emailOrUsername.includes('@');
+    const body = isEmail
+      ? { email: loginData.emailOrUsername.trim(), password: loginData.password }
+      : { username: loginData.emailOrUsername.trim(), password: loginData.password };
 
     try {
       const response = await fetch('/.netlify/functions/auth-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          username: loginData.username,
-          password: loginData.password
-        })
+        body: JSON.stringify(body)
       });
 
       const data = await response.json();
@@ -66,9 +58,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
         onAuthSuccess(data.user, data.session);
         onClose();
       } else {
-        // More specific error messages
         if (response.status === 401) {
-          setError('Invalid username or password. Please check your credentials.');
+          setError('Invalid email or password. Please check your credentials.');
         } else if (response.status === 403) {
           setError('Access denied. Only @deloitte.com email addresses are allowed.');
         } else if (response.status === 500) {
@@ -91,36 +82,37 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
     setError(null);
 
     try {
+      const body: Record<string, unknown> = {
+        email: registerData.email.trim().toLowerCase(),
+        password: registerData.password
+      };
+      if (registerData.name.trim()) body.name = registerData.name.trim();
+      if (registerData.role) body.role = registerData.role;
+      if (registerData.location) body.location = registerData.location;
+      if (registerData.skills.length) body.skills = registerData.skills;
+      if (registerData.weeklyCapacityHrs) body.weeklyCapacityHrs = registerData.weeklyCapacityHrs;
+
       const response = await fetch('/.netlify/functions/auth-register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          username: registerData.username,
-          name: registerData.name,
-          role: registerData.role,
-          location: registerData.location,
-          skills: registerData.skills,
-          weeklyCapacityHrs: registerData.weeklyCapacityHrs
-        })
+        body: JSON.stringify(body)
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // Show success message and switch to login mode
         setError(null);
         setMode('login');
-        // Pre-fill username for login
-        setLoginData({ ...loginData, username: registerData.username });
-        // Show success message
-        alert(data.message || 'Registration successful! Please check your email for login credentials.');
+        setLoginData((prev) => ({ ...prev, emailOrUsername: registerData.email.trim().toLowerCase() }));
+        alert(data.message || 'Check your email to confirm your account before logging in.');
       } else {
-        // More specific error messages for registration
         if (response.status === 409) {
-          setError('Username already exists. Please choose a different username.');
+          setError('An account with this email already exists. Try logging in or use a different email.');
         } else if (response.status === 400) {
           setError('Invalid input. Please check all fields and try again.');
+        } else if (response.status === 403) {
+          setError(data.error || 'Only @deloitte.com email addresses are allowed.');
         } else if (response.status === 500) {
           setError('Server error. Please try again later.');
         } else {
@@ -135,63 +127,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
     }
   };
 
-  const handleDevRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/.netlify/functions/auth-register-dev', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(devRegisterData)
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Show success message and switch to login mode
-        setError(null);
-        setMode('login');
-        // Pre-fill username for login (extract from email)
-        const username = devRegisterData.email.split('@')[0];
-        setLoginData({ ...loginData, username: username });
-        // Show success message
-        alert(data.message || 'Dev registration successful! You can now login with your email and password.');
-      } else {
-        // More specific error messages for dev registration
-        if (response.status === 409) {
-          setError('Email already exists. Please use a different email.');
-        } else if (response.status === 400) {
-          setError('Invalid input. Please check your email and password.');
-        } else if (response.status === 500) {
-          setError('Server error. Please try again later.');
-        } else {
-          setError(data.error || 'Registration failed. Please try again.');
-        }
-      }
-    } catch (err) {
-      console.error('Dev registration error:', err);
-      setError('Network error. Please check your connection and try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const resetForm = () => {
-    setLoginData({ username: '', password: '' });
+    setLoginData({ emailOrUsername: '', password: '' });
     setRegisterData({
-      username: '',
+      email: '',
+      password: '',
       name: '',
       role: 'Developer',
       location: '',
       skills: [],
       weeklyCapacityHrs: 40
-    });
-    setDevRegisterData({
-      email: '',
-      password: ''
     });
     setError(null);
   };
@@ -233,7 +178,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
               className="flex-1"
               size="sm"
             >
-              Register
+              Sign up
             </Button>
           </div>
 
@@ -275,22 +220,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
           {mode === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="login-username" className="text-sm font-medium text-foreground">
-                  Username
+                <label htmlFor="login-email" className="text-sm font-medium text-foreground">
+                  Email
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
                   <Input
-                    id="login-username"
+                    id="login-email"
                     type="text"
-                    value={loginData.username}
-                    onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
+                    autoComplete="email"
+                    value={loginData.emailOrUsername}
+                    onChange={(e) => setLoginData({ ...loginData, emailOrUsername: e.target.value })}
                     className="pl-10 pr-3"
-                    placeholder="your.username"
+                    placeholder="you@deloitte.com or username"
                     required
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Login with your Deloitte username</p>
+                <p className="text-xs text-muted-foreground">Use your full email or username</p>
               </div>
 
               <div className="space-y-2">
@@ -302,6 +248,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                   <Input
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
                     value={loginData.password}
                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                     className="pl-10 pr-10"
@@ -318,61 +265,60 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                 </div>
               </div>
 
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="text-sm text-primary hover:underline"
+                  onClick={() => setShowResetModal(true)}
+                >
+                  Forgot password?
+                </button>
+              </div>
+
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
           )}
 
-          {/* Dev Register Form */}
-          {mode === 'register' && IS_DEV_MODE && (
-            <form onSubmit={handleDevRegister} className="space-y-4">
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg mb-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0">
-                    <div className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5">⚠️</div>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-yellow-900 dark:text-yellow-100">Development Mode</h4>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                      Simplified registration for testing. Just enter your email and password.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
+          {/* Sign up Form */}
+          {mode === 'register' && (
+            <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="dev-email" className="text-sm font-medium text-foreground">
-                  Email Address
+                <label htmlFor="register-email" className="text-sm font-medium text-foreground">
+                  Email <span className="text-muted-foreground">(must be @deloitte.com)</span>
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="dev-email"
+                    id="register-email"
                     type="email"
-                    value={devRegisterData.email}
-                    onChange={(e) => setDevRegisterData({ ...devRegisterData, email: e.target.value })}
+                    autoComplete="email"
+                    value={registerData.email}
+                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                     className="pl-10 pr-3"
-                    placeholder="your.email@example.com"
+                    placeholder="you@deloitte.com"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="dev-password" className="text-sm font-medium text-foreground">
+                <label htmlFor="register-password" className="text-sm font-medium text-foreground">
                   Password
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="dev-password"
+                    id="register-password"
                     type={showPassword ? 'text' : 'password'}
-                    value={devRegisterData.password}
-                    onChange={(e) => setDevRegisterData({ ...devRegisterData, password: e.target.value })}
+                    autoComplete="new-password"
+                    value={registerData.password}
+                    onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                     className="pl-10 pr-10"
-                    placeholder="Enter your password"
+                    placeholder="Min 8 characters"
                     required
+                    minLength={8}
                   />
                   <button
                     type="button"
@@ -382,22 +328,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                     {showPassword ? <EyeOff /> : <Eye />}
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
+                <p className="text-xs text-muted-foreground">Choose a password (at least 8 characters)</p>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating Account...' : 'Create Dev Account'}
-              </Button>
-            </form>
-          )}
-
-          {/* Register Form */}
-          {mode === 'register' && !IS_DEV_MODE && (
-            <form onSubmit={handleRegister} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="register-name" className="text-sm font-medium text-foreground">
-                    Full Name
+                    Name <span className="text-muted-foreground">(optional)</span>
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -408,73 +345,39 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                       onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
                       className="pl-10 pr-3"
                       placeholder="John Doe"
-                      required
                     />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <label htmlFor="register-role" className="text-sm font-medium text-foreground">
-                    Role
+                    Role <span className="text-muted-foreground">(optional)</span>
                   </label>
-                  <div className="relative">
-                    <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <select
-                      id="register-role"
-                      value={registerData.role}
-                      onChange={(e) => setRegisterData({ ...registerData, role: e.target.value as any })}
-                      className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                      required
-                    >
-                      <option value="Developer">Developer</option>
-                      <option value="Designer">Designer</option>
-                      <option value="Lead">Lead</option>
-                      <option value="Manager">Manager</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="register-username" className="text-sm font-medium text-foreground">
-                  Username
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <input
-                    id="register-username"
-                    type="text"
-                    value={registerData.username}
-                    onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="your.username"
-                    required
-                  />
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Email will be:</span>
-                  <span className="font-mono bg-muted px-2 py-1 rounded">
-                    {registerData.username || 'username'}@deloitte.com
-                  </span>
+                  <Select value={registerData.role} onValueChange={(value) => setRegisterData({ ...registerData, role: value as typeof registerData.role })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Developer">Developer</SelectItem>
+                      <SelectItem value="Designer">Designer</SelectItem>
+                      <SelectItem value="Lead">Lead</SelectItem>
+                      <SelectItem value="Manager">Manager</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <label htmlFor="register-location" className="text-sm font-medium text-foreground">
-                  Studio Location
+                  Studio location <span className="text-muted-foreground">(optional)</span>
                 </label>
                 <Select value={registerData.location} onValueChange={(value) => setRegisterData({ ...registerData, location: value })}>
                   <SelectTrigger className="w-full">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Select your studio location" />
-                    </div>
+                    <MapPin className="h-4 w-4 text-muted-foreground mr-2" />
+                    <SelectValue placeholder="Select location" />
                   </SelectTrigger>
                   <SelectContent>
-                    {AVAILABLE_LOCATIONS.map((location) => (
-                      <SelectItem key={location} value={location}>
-                        {location}
-                      </SelectItem>
+                    {AVAILABLE_LOCATIONS.map((loc) => (
+                      <SelectItem key={loc} value={loc}>{loc}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -482,7 +385,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
 
               <div className="space-y-2">
                 <label htmlFor="register-skills" className="text-sm font-medium text-foreground">
-                  Skills
+                  Skills <span className="text-muted-foreground">(optional, comma-separated)</span>
                 </label>
                 <div className="relative">
                   <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -490,62 +393,46 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess })
                     id="register-skills"
                     type="text"
                     value={registerData.skills.join(', ')}
-                    onChange={(e) => setRegisterData({ 
-                      ...registerData, 
-                      skills: e.target.value.split(',').map(skill => skill.trim()).filter(skill => skill.length > 0)
+                    onChange={(e) => setRegisterData({
+                      ...registerData,
+                      skills: e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
                     })}
                     className="pl-10"
-                    placeholder="e.g. React, TypeScript, UI/UX Design"
-                    required
+                    placeholder="e.g. React, TypeScript"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Enter your key skills separated by commas</p>
               </div>
 
               <div className="space-y-2">
                 <label htmlFor="register-capacity" className="text-sm font-medium text-foreground">
-                  Weekly Capacity (Hours)
+                  Weekly capacity (hours) <span className="text-muted-foreground">(optional)</span>
                 </label>
                 <div className="relative">
                   <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="register-capacity"
                     type="number"
-                    min="1"
-                    max="40"
+                    min={1}
+                    max={40}
                     value={registerData.weeklyCapacityHrs}
-                    onChange={(e) => setRegisterData({ 
-                      ...registerData, 
-                      weeklyCapacityHrs: parseInt(e.target.value) || 1
-                    })}
+                    onChange={(e) => setRegisterData({ ...registerData, weeklyCapacityHrs: parseInt(e.target.value, 10) || 40 })}
                     className="pl-10"
-                    placeholder="40"
-                    required
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">How many hours per week can you dedicate to initiatives?</p>
               </div>
 
-              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">Password Information</h4>
-                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                      A secure password will be automatically generated and sent to your email address. 
-                      You'll be required to change it on your first login.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                After signing up, check your email to confirm your account. Then you can log in.
+              </p>
 
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating Account...' : 'Create Account'}
+                {loading ? 'Creating account...' : 'Sign up'}
               </Button>
             </form>
           )}
         </div>
       </DialogContent>
+      <PasswordResetModal isOpen={showResetModal} onClose={() => setShowResetModal(false)} />
     </Dialog>
   );
 };

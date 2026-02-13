@@ -21,7 +21,6 @@ export interface User {
   weeklyCapacityHrs: number;
   avatarUrl: string;
   isAdmin?: boolean;
-  password_hash?: string;
 }
 
 export type InitiativeStatus = 'Searching Talent' | 'In Progress' | 'Under Review' | 'Completed';
@@ -31,6 +30,8 @@ export interface Initiative {
   title: string;
   description: string;
   ownerId: string;
+  /** Populated when initiative is loaded with owner join; required when creating. */
+  owner?: User;
   teamMembers: { userId: string; committedHours: number }[];
   status: InitiativeStatus;
   startDate: string;
@@ -50,14 +51,21 @@ export interface Task {
   status: TaskStatus;
   dueDate?: string;
   estHrs?: number;
+  createdAt?: string;
+  /** Populated when loaded with assignee join */
+  user?: User;
+  /** Populated when loaded with initiative join */
+  initiative?: Initiative;
 }
 
 export interface HelpWanted {
-  id:string;
+  id: string;
   initiativeId: string;
   skill: string;
   hoursPerWeek: number;
   status: 'Open' | 'Closed';
+  /** Populated when loaded with initiative join */
+  initiative?: Initiative;
 }
 
 export enum JoinRequestStatus {
@@ -76,6 +84,10 @@ export interface JoinRequest {
   createdAt: string;
   helpWantedId?: string;
   committedHours?: number;
+  /** Populated when loaded with user join */
+  user?: User;
+  /** Populated when loaded with initiative join */
+  initiative?: Initiative;
 }
 
 // --- Notification System Types ---
