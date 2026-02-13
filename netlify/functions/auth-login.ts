@@ -3,8 +3,13 @@ import { z } from 'zod'
 import { createClient } from '@supabase/supabase-js'
 import { authRateLimit, createRateLimitResponse } from './_lib/rateLimit'
 import { withSecurity } from './_lib/security'
+import { buildSupabaseAuthCookie } from './_lib/cookies'
 
-const bodySchema = z.object({ username: z.string().min(1), password: z.string().min(1) })
+const bodySchema = z.object({
+  username: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+  password: z.string().min(1)
+}).refine((d) => d.username ?? d.email, { message: 'email or username required' })
 
 const loginHandler: Handler = async (event) => {
   try {
@@ -12,23 +17,21 @@ const loginHandler: Handler = async (event) => {
       return { statusCode: 405, body: 'Method Not Allowed' }
     }
 
-    // Apply rate limiting
-    const rateLimitResult = authRateLimit(event);
-    const rateLimitResponse = createRateLimitResponse(rateLimitResult);
-    if (rateLimitResponse) {
-      return rateLimitResponse;
-    }
+    const rateLimitResult = authRateLimit(event)
+    const rateLimitResponse = createRateLimitResponse(rateLimitResult)
+    if (rateLimitResponse) return rateLimitResponse
 
     const parsed = bodySchema.safeParse(JSON.parse(event.body || '{}'))
     if (!parsed.success) {
       return { statusCode: 400, body: JSON.stringify({ error: parsed.error.message }) }
     }
 
-    const { username, password } = parsed.data
+    const { username, email, password } = parsed.data
     const allowedDomain = (process.env.ALLOWED_EMAIL_DOMAIN || 'deloitte.com').toLowerCase()
-    
-    // Convert username to email format
-    const emailLower = `${username.toLowerCase().trim()}@${allowedDomain}`
+
+    const emailLower = email?.trim().toLowerCase().includes('@')
+      ? email.trim().toLowerCase()
+      : `${(username ?? email ?? '').toLowerCase().trim()}@${allowedDomain}`
 
     // Initialize Supabase client
     const supabaseUrl = process.env.SUPABASE_URL
@@ -83,10 +86,11 @@ const loginHandler: Handler = async (event) => {
       console.error('Error fetching user data:', userError)
       // If user doesn't exist in custom table yet, return basic info
       // The trigger should have created it, but there might be a race condition
+      const isSecure = (event.headers['x-forwarded-proto'] || '').includes('https')
       return {
         statusCode: 200,
         headers: {
-          'Set-Cookie': buildSupabaseCookie(data.session.access_token, data.session.refresh_token),
+          'Set-Cookie': buildSupabaseAuthCookie(data.session.access_token, data.session.refresh_token, isSecure),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
@@ -95,7 +99,7 @@ const loginHandler: Handler = async (event) => {
           user: { 
             id: data.user.id,
             email: data.user.email,
-            name: data.user.user_metadata?.name || username,
+            name: data.user.user_metadata?.name || emailLower.split('@')[0],
             role: data.user.user_metadata?.role || 'Developer',
             location: data.user.user_metadata?.location || 'Remote',
             skills: data.user.user_metadata?.skills || [],
@@ -106,11 +110,11 @@ const loginHandler: Handler = async (event) => {
       }
     }
 
-    // Return success with session and user data
+    const isSecure = (event.headers['x-forwarded-proto'] || '').includes('https')
     return {
       statusCode: 200,
       headers: {
-        'Set-Cookie': buildSupabaseCookie(data.session.access_token, data.session.refresh_token),
+        'Set-Cookie': buildSupabaseAuthCookie(data.session.access_token, data.session.refresh_token, isSecure),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ 
@@ -137,18 +141,3 @@ const loginHandler: Handler = async (event) => {
 }
 
 export const handler = withSecurity(loginHandler);
-
-// Build Supabase auth cookies
-function buildSupabaseCookie(accessToken: string, refreshToken: string): string {
-  const isSecure = process.env.NODE_ENV === 'production'
-  const parts = [
-    `sb-access-token=${encodeURIComponent(accessToken)}`,
-    `sb-refresh-token=${encodeURIComponent(refreshToken)}`,
-    'Path=/',
-    'HttpOnly',
-    'SameSite=Lax',
-  ]
-  if (isSecure) parts.push('Secure')
-  parts.push('Max-Age=604800') // 7 days
-  return parts.join('; ')
-}

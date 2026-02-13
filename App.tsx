@@ -10,6 +10,8 @@ import UserProfile from './components/UserProfile';
 import DocsPage from './components/DocsPage';
 import OpportunitiesPage from './components/OpportunitiesPage';
 import AuthModal from './components/AuthModal';
+import AuthCallback from './components/AuthCallback';
+import ResetPasswordPage from './components/ResetPasswordPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { OnboardingBanner } from './components/OnboardingBanner';
 import { NetworkError } from './components/NetworkError';
@@ -297,12 +299,21 @@ function AppContent() {
 
 function AppInner() {
   const { currentUser, authLoading, isAuthenticated, showAuthModal, setShowAuthModal, checkAuth, login } = useAuth();
+  const location = useLocation();
+  const pathname = location.pathname;
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     if (initialized) return;
     checkAuth().then(() => setInitialized(true));
   }, [initialized, checkAuth]);
+
+  if (pathname === '/auth/callback') {
+    return <AuthCallback />;
+  }
+  if (pathname === '/auth/reset-password') {
+    return <ResetPasswordPage />;
+  }
 
   if (!initialized || authLoading) {
     return (

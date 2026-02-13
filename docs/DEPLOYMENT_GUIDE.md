@@ -66,6 +66,10 @@ Requires: `SUPABASE_DB_URL` and `psql` on PATH (e.g. `brew install libpq`).
 
 In [Supabase Dashboard](https://supabase.com/dashboard) → SQL Editor, run the contents of each of the 6 files above in order.
 
+### Cleaning all users
+
+To wipe all users (e.g. for a fresh start): run **scripts/purge-all-users.sql** (Supabase Dashboard → SQL Editor, or `psql "$SUPABASE_DB_URL" -f scripts/purge-all-users.sql`). This truncates `public.users` and deletes `auth.users`. To then create a single admin, run **scripts/setup-admin-and-purge-users.sql** (purge + admin in one go) or **scripts/setup-admin-via-sql.sh** after the purge.
+
 CORS for the app is set in `netlify/functions/_lib/security.ts` to your single Netlify site URL.
 
 ## Netlify build
